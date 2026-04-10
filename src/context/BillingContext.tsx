@@ -27,7 +27,7 @@ interface BillingContextValue {
 const BillingContext = createContext<BillingContextValue | undefined>(undefined);
 
 async function fetchSubscriptionStatus(email: string) {
-  const response = await apiFetch(`/api/billing/me?email=${encodeURIComponent(email)}`);
+  const response = await apiFetch(`${import.meta.env.VITE_API_BASE_URL}/api/billing/me?email=${encodeURIComponent(email)}`);
   const payload = await parseApiJson<{
     data?: {
       plan?: BillingSubscription["plan"];
@@ -123,7 +123,7 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
 
         setIsLoading(true);
         try {
-          const response = await apiFetch("/api/billing/subscription", {
+          const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/billing/subscription", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

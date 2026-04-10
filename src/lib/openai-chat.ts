@@ -24,7 +24,7 @@ export async function requestOpenAiReply(
         },
         body,
       })
-    : await apiFetch("/api/chat/reply", {
+    : await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/chat/reply", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

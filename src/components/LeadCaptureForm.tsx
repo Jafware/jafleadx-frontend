@@ -47,7 +47,7 @@ export function LeadCaptureForm({ className }: { className?: string }) {
     setSuccessMessage("");
 
     try {
-      const response = await fetch(buildApiUrl("/api/leads/capture"), {
+      const response = await fetch(buildApiUrl("${import.meta.env.VITE_API_BASE_URL}/api/leads/capture"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

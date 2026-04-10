@@ -275,7 +275,7 @@ export default function Conversations() {
 
     void (async () => {
       try {
-        const response = await apiFetch("/api/chat/send", {
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/chat/send", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

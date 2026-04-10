@@ -48,7 +48,7 @@ export default function Onboarding() {
 
     const loadSettings = async () => {
       try {
-        const response = await apiFetch("/api/settings");
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/settings");
         const payload = await parseApiJson<SettingsApiResponse>(response);
 
         if (!response.ok) {
@@ -117,7 +117,7 @@ export default function Onboarding() {
 
     setIsSaving(true);
     try {
-      const response = await apiFetch("/api/settings", {
+      const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/settings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -176,7 +176,7 @@ export default function Leads() {
       }
 
       try {
-        const response = await apiFetch("/api/leads");
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/leads");
         const payload = await parseApiJson<LeadsApiResponse>(response);
 
         if (!response.ok) {
@@ -297,7 +297,7 @@ export default function Leads() {
     setIsSaving(true);
 
     try {
-      const response = await apiFetch("/api/leads", {
+      const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/leads", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

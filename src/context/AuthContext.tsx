@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const response = await apiFetch("/api/auth/me");
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/auth/me");
         const payload = await parseApiJson<AuthApiResponse>(response);
 
         if (!response.ok || !payload.data?.user) {
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error("Email and password are required.");
         }
 
-        const response = await apiFetch("/api/auth/login", {
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/auth/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error("Name, email, and password are required.");
         }
 
-        const response = await apiFetch("/api/auth/register", {
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/auth/register", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

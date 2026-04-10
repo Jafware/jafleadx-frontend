@@ -69,7 +69,7 @@ export default function Dashboard() {
       setStatsLoading(true);
 
       try {
-        const response = await apiFetch("/api/dashboard/stats");
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/dashboard/stats");
         const payload = await parseApiJson<DashboardStatsResponse>(response);
 
         if (!response.ok) {

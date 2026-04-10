@@ -33,7 +33,7 @@ export default function AutomationPage() {
 
     const loadAutomationSettings = async () => {
       try {
-        const response = await apiFetch("/api/settings");
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/settings");
         const payload = await parseApiJson<{ data?: { settings?: { automationEnabled?: boolean; followUps?: FollowUpStep[] } }; message?: string }>(response);
 
         if (!response.ok) {
@@ -97,7 +97,7 @@ export default function AutomationPage() {
     setIsSaving(true);
 
     try {
-      const response = await apiFetch("/api/settings", {
+      const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/settings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

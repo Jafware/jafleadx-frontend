@@ -67,7 +67,7 @@ export default function AnalyticsPage() {
 
     const loadAnalytics = async () => {
       try {
-        const response = await apiFetch("/api/analytics");
+        const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/analytics");
         const payload = await parseApiJson<AnalyticsApiResponse>(response);
 
         if (!response.ok) {

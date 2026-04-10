@@ -22,7 +22,7 @@ export async function fetchTwilioConversations() {
 }
 
 export async function updateTwilioSettings(settings: Settings) {
-  const response = await apiFetch("/api/settings", {
+  const response = await apiFetch("${import.meta.env.VITE_API_BASE_URL}/api/settings", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -40,7 +40,7 @@ export async function updateTwilioSettings(settings: Settings) {
 }
 
 export async function updateTwilioConversationMode(conversationId: EntityId, mode: "ai" | "manual") {
-  const response = await apiFetch(`/api/chat/conversations/${encodeURIComponent(String(conversationId))}/mode`, {
+  const response = await apiFetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat/conversations/${encodeURIComponent(String(conversationId))}/mode`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -62,7 +62,7 @@ export async function sendTwilioConversationMessage(input: {
   body: string;
   sender?: "agent" | "ai";
 }) {
-  const response = await apiFetch(`/api/chat/conversations/${encodeURIComponent(String(input.conversationId))}/messages`, {
+  const response = await apiFetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat/conversations/${encodeURIComponent(String(input.conversationId))}/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
