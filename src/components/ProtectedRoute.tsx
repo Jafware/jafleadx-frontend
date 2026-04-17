@@ -12,6 +12,10 @@ function RouteLoading() {
   );
 }
 
+function hasCoreAppAccess(subscription: { plan: string; status: string }) {
+  return subscription.plan === "starter" || subscription.status === "active";
+}
+
 export function AuthenticatedRoute() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
@@ -31,7 +35,7 @@ export function ProtectedRoute() {
     return <RouteLoading />;
   }
 
-  if (subscription.status !== "active") {
+  if (!hasCoreAppAccess(subscription)) {
     return <Navigate to="/pricing" replace state={{ from: location }} />;
   }
 
@@ -43,7 +47,7 @@ export function PublicOnlyRoute() {
   const { subscription } = useBilling();
 
   if (isAuthenticated) {
-    return <Navigate to={subscription.status === "active" ? "/dashboard" : "/pricing"} replace />;
+    return <Navigate to={hasCoreAppAccess(subscription) ? "/dashboard" : "/pricing"} replace />;
   }
 
   return <Outlet />;

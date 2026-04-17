@@ -26,7 +26,7 @@ describe("app routes", () => {
     expect(await screen.findByText("Welcome back")).toBeInTheDocument();
   });
 
-  it("redirects authenticated users without an active subscription to pricing", async () => {
+  it("allows authenticated starter users into the dashboard even when subscription status is inactive", async () => {
     window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, "test-token");
 
     vi.spyOn(window, "fetch").mockImplementation(async (input) => {
@@ -80,7 +80,8 @@ describe("app routes", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Choose Your Plan")).toBeInTheDocument();
+      expect(screen.getAllByText("Dashboard")[0]).toBeInTheDocument();
+      expect(screen.queryByText("Choose Your Plan")).not.toBeInTheDocument();
     });
   });
 });
