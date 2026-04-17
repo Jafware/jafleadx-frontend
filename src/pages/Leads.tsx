@@ -41,6 +41,7 @@ interface LeadsApiResponse {
 }
 
 type LeadSourceGroup = "WhatsApp" | "Website" | "Manual" | "Ads";
+type BackendLeadStatus = "new" | "qualified" | "follow_up" | "converted";
 
 const statusColor: Record<string, string> = {
   New: "bg-info/15 text-info border-info/20",
@@ -54,6 +55,12 @@ const statusOptions = ["all", "New", "Qualified", "Follow-up", "Converted"] as c
 const groupedSourceOrder: LeadSourceGroup[] = ["WhatsApp", "Website", "Manual", "Ads"];
 const LEAD_REFRESH_INTERVAL_MS = 15000;
 const LEAD_HIGHLIGHT_DURATION_MS = 6000;
+const leadStatusOptions: Array<{ value: BackendLeadStatus; label: "New" | "Qualified" | "Follow-up" | "Converted" }> = [
+  { value: "new", label: "New" },
+  { value: "qualified", label: "Qualified" },
+  { value: "follow_up", label: "Follow-up" },
+  { value: "converted", label: "Converted" },
+];
 
 function formatLastContact(value: string | null | undefined) {
   if (!value) {
@@ -75,7 +82,7 @@ function normalizeLeadStatus(status: string) {
     return "Qualified";
   }
 
-  if (value === "follow-up" || value === "followup") {
+  if (value === "follow_up" || value === "follow-up" || value === "followup") {
     return "Follow-up";
   }
 
@@ -84,6 +91,24 @@ function normalizeLeadStatus(status: string) {
   }
 
   return "New";
+}
+
+function formatLeadCreatedAt(value: string | null | undefined) {
+  if (!value) {
+    return "Unknown";
+  }
+
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function mergeLeadIntoList(leads: LeadsApiItem[], updatedLead: LeadsApiItem) {
+  return leads.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead));
 }
 
 function normalizeLeadSource(source: string): LeadSourceGroup {
@@ -121,6 +146,14 @@ export default function Leads() {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLeadDetailOpen, setIsLeadDetailOpen] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLead, setSelectedLead] = useState<LeadsApiItem | null>(null);
+  const [isLeadDetailLoading, setIsLeadDetailLoading] = useState(false);
+  const [leadDetailError, setLeadDetailError] = useState<string | null>(null);
+  const [isUpdatingLead, setIsUpdatingLead] = useState(false);
+  const [leadNotesDraft, setLeadNotesDraft] = useState("");
+  const [isSavingLeadNotes, setIsSavingLeadNotes] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const { canAddLead, currentPlan } = useBilling();
   const hasLeadCapacity = canAddLead(leads.length);
@@ -247,6 +280,51 @@ export default function Leads() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLeadDetail = async () => {
+      if (!isLeadDetailOpen || !selectedLeadId) {
+        return;
+      }
+
+      setIsLeadDetailLoading(true);
+      setLeadDetailError(null);
+
+      try {
+        const response = await apiFetch(`/api/leads/${selectedLeadId}`);
+        const payload = await parseApiJson<LeadsApiResponse>(response);
+
+        if (!response.ok || !payload.data?.lead) {
+          throw new Error(payload.message || "Unable to fetch lead details.");
+        }
+
+        if (!cancelled) {
+          setSelectedLead(payload.data.lead);
+          setLeads((current) => mergeLeadIntoList(current, payload.data!.lead!));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLeadDetailError(error instanceof Error ? error.message : "Unable to fetch lead details.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLeadDetailLoading(false);
+        }
+      }
+    };
+
+    void loadLeadDetail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLeadDetailOpen, selectedLeadId]);
+
+  useEffect(() => {
+    setLeadNotesDraft(selectedLead?.notes ?? "");
+  }, [selectedLead]);
+
   const filteredLeads = useMemo(
     () =>
       leads.filter((lead) => {
@@ -282,6 +360,92 @@ export default function Leads() {
       })),
     [leads],
   );
+
+  const openLeadDetail = (lead: LeadsApiItem) => {
+    setSelectedLeadId(lead.id);
+    setSelectedLead(lead);
+    setLeadDetailError(null);
+    setIsLeadDetailOpen(true);
+  };
+
+  const handleLeadStatusChange = async (nextStatus: BackendLeadStatus) => {
+    if (!selectedLeadId || !selectedLead) {
+      return;
+    }
+
+    if (selectedLead.status === nextStatus) {
+      return;
+    }
+
+    setIsUpdatingLead(true);
+
+    try {
+      const response = await apiFetch(`/api/leads/${selectedLeadId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: nextStatus,
+        }),
+      });
+      const payload = await parseApiJson<LeadsApiResponse>(response);
+
+      if (!response.ok || !payload.data?.lead) {
+        throw new Error(payload.message || "Unable to update lead status.");
+      }
+
+      setSelectedLead(payload.data.lead);
+      setLeads((current) => mergeLeadIntoList(current, payload.data!.lead!));
+      toast.success("Lead status updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update lead status.");
+    } finally {
+      setIsUpdatingLead(false);
+    }
+  };
+
+  const handleSaveLeadNotes = async () => {
+    if (!selectedLeadId || !selectedLead) {
+      return;
+    }
+
+    const normalizedNotes = leadNotesDraft.trim();
+    const nextNotes = normalizedNotes || null;
+    const currentNotes = selectedLead.notes?.trim() || null;
+
+    if (currentNotes === nextNotes) {
+      toast.success("Notes are already up to date.");
+      return;
+    }
+
+    setIsSavingLeadNotes(true);
+
+    try {
+      const response = await apiFetch(`/api/leads/${selectedLeadId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          notes: nextNotes,
+        }),
+      });
+      const payload = await parseApiJson<LeadsApiResponse>(response);
+
+      if (!response.ok || !payload.data?.lead) {
+        throw new Error(payload.message || "Unable to update lead notes.");
+      }
+
+      setSelectedLead(payload.data.lead);
+      setLeads((current) => mergeLeadIntoList(current, payload.data!.lead!));
+      toast.success("Lead notes updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update lead notes.");
+    } finally {
+      setIsSavingLeadNotes(false);
+    }
+  };
 
   const handleCreateLead = async () => {
     if (!name.trim() || !phone.trim()) {
@@ -528,7 +692,13 @@ export default function Leads() {
                               <td className="px-5 py-4">
                                 <div className="min-w-[180px]">
                                   <div className="flex items-center gap-2">
-                                    <p className="font-medium text-foreground">{lead.name}</p>
+                                    <button
+                                      type="button"
+                                      className="font-medium text-foreground transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                                      onClick={() => openLeadDetail(lead)}
+                                    >
+                                      {lead.name}
+                                    </button>
                                     {highlightedLeadIds.includes(lead.id) ? (
                                       <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
                                         New
@@ -582,6 +752,97 @@ export default function Leads() {
             </table>
           </div>
         </section>
+
+        <Dialog
+          open={isLeadDetailOpen}
+          onOpenChange={(open) => {
+            setIsLeadDetailOpen(open);
+
+            if (!open) {
+              setLeadDetailError(null);
+              setSelectedLeadId(null);
+              setSelectedLead(null);
+              setLeadNotesDraft("");
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{selectedLead?.name || "Lead details"}</DialogTitle>
+              <DialogDescription>
+                Review lead information and update the lead status for follow-up.
+              </DialogDescription>
+            </DialogHeader>
+
+            {isLeadDetailLoading ? (
+              <div className="py-6 text-sm text-muted-foreground">Loading lead details...</div>
+            ) : leadDetailError ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {leadDetailError}
+              </div>
+            ) : selectedLead ? (
+              <div className="space-y-5 pt-2">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Name</p>
+                    <p className="text-sm text-foreground">{selectedLead.name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Phone</p>
+                    <p className="text-sm text-foreground">{selectedLead.phone}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Created</p>
+                    <p className="text-sm text-foreground">{formatLeadCreatedAt(selectedLead.createdAt)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Status</p>
+                    <Select value={selectedLead.status} onValueChange={(value) => void handleLeadStatusChange(value as BackendLeadStatus)}>
+                      <SelectTrigger className="h-11 rounded-2xl" disabled={isUpdatingLead}>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {leadStatusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {isUpdatingLead ? "Saving status..." : `Current status: ${normalizeLeadStatus(selectedLead.status)}`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Notes</p>
+                  <Textarea
+                    value={leadNotesDraft}
+                    onChange={(event) => setLeadNotesDraft(event.target.value)}
+                    className="min-h-[112px]"
+                    placeholder="Add context, follow-up details, or qualification notes"
+                    disabled={isSavingLeadNotes}
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {isSavingLeadNotes
+                        ? "Saving notes..."
+                        : (selectedLead.notes?.trim() || null) === (leadNotesDraft.trim() || null)
+                          ? "Notes are in sync."
+                          : "Unsaved notes changes."}
+                    </p>
+                    <Button type="button" onClick={handleSaveLeadNotes} disabled={isSavingLeadNotes}>
+                      {isSavingLeadNotes ? "Saving..." : "Save Notes"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 text-sm text-muted-foreground">Select a lead to view its details.</div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
