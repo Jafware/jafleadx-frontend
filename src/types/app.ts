@@ -34,6 +34,7 @@ export interface Lead {
   id: EntityId;
   name: string;
   phone: string;
+  email?: string | null;
   source: string;
   status: LeadStatus;
   notes?: string | null;

@@ -705,6 +705,9 @@ export default function Leads() {
                                       </span>
                                     ) : null}
                                   </div>
+                                  {lead.email ? (
+                                    <p className="mt-1 truncate text-xs text-muted-foreground">{lead.email}</p>
+                                  ) : null}
                                   <p className="mt-1 text-xs text-muted-foreground sm:hidden">{lead.phone}</p>
                                 </div>
                               </td>
@@ -786,6 +789,10 @@ export default function Leads() {
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Name</p>
                     <p className="text-sm text-foreground">{selectedLead.name}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Email</p>
+                    <p className="text-sm text-foreground">{selectedLead.email?.trim() || "No email"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Phone</p>
