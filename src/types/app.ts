@@ -97,6 +97,9 @@ export interface Settings {
   businessName: string;
   businessType: string;
   whatsappNumber: string;
+  publicCaptureEnabled: boolean;
+  publicCaptureSiteKey: string;
+  publicCaptureAllowedOrigins: string[];
   tone: string;
   businessDescription: string;
   automationEnabled: boolean;

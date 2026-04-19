@@ -44,6 +44,15 @@ export function normalizeSettings(settings: Settings): Settings {
   return {
     ...settings,
     whatsappNumber: settings.whatsappNumber?.trim() || "",
+    publicCaptureEnabled: settings.publicCaptureEnabled ?? false,
+    publicCaptureSiteKey: settings.publicCaptureSiteKey?.trim() || "",
+    publicCaptureAllowedOrigins: Array.from(
+      new Set(
+        (settings.publicCaptureAllowedOrigins ?? [])
+          .map((origin) => origin?.trim?.() || "")
+          .filter(Boolean),
+      ),
+    ),
     automationEnabled: settings.automationEnabled ?? true,
     tone: settings.tone?.trim() || "friendly",
     faqs: settings.faqs ?? [],
