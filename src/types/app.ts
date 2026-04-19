@@ -36,6 +36,8 @@ export interface Lead {
   phone: string;
   email?: string | null;
   source: string;
+  captureOrigin?: string | null;
+  captureReferer?: string | null;
   status: LeadStatus;
   notes?: string | null;
   createdAt: string;

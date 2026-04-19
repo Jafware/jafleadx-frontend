@@ -26,6 +26,8 @@ interface LeadsApiItem {
   email?: string | null;
   status: string;
   source: string;
+  captureOrigin?: string | null;
+  captureReferer?: string | null;
   notes?: string | null;
   lastContactAt: string | null;
   createdAt: string;
@@ -48,6 +50,13 @@ const statusColor: Record<string, string> = {
   Qualified: "bg-warning/15 text-warning border-warning/20",
   "Follow-up": "bg-primary/15 text-primary border-primary/20",
   Converted: "bg-success/15 text-success border-success/20",
+};
+
+const sourceColor: Record<LeadSourceGroup, string> = {
+  WhatsApp: "bg-emerald-500/12 text-emerald-300 border-emerald-500/20",
+  Website: "bg-sky-500/12 text-sky-300 border-sky-500/20",
+  Manual: "bg-amber-500/12 text-amber-300 border-amber-500/20",
+  Ads: "bg-fuchsia-500/12 text-fuchsia-300 border-fuchsia-500/20",
 };
 
 const sourceOptions = ["all", "WhatsApp", "Website", "Manual", "Ads"] as const;
@@ -109,6 +118,30 @@ function formatLeadCreatedAt(value: string | null | undefined) {
 
 function mergeLeadIntoList(leads: LeadsApiItem[], updatedLead: LeadsApiItem) {
   return leads.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead));
+}
+
+function formatCaptureValue(value: string | null | undefined) {
+  const normalizedValue = value?.trim() || "";
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return normalizedValue;
+}
+
+function formatCaptureOriginSummary(value: string | null | undefined) {
+  const normalizedValue = formatCaptureValue(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  try {
+    return new URL(normalizedValue).host;
+  } catch {
+    return normalizedValue;
+  }
 }
 
 function normalizeLeadSource(source: string): LeadSourceGroup {
@@ -724,7 +757,23 @@ export default function Leads() {
                                   {normalizeLeadStatus(lead.status)}
                                 </span>
                               </td>
-                              <td className="px-5 py-4 text-muted-foreground">{normalizeLeadSource(lead.source)}</td>
+                              <td className="px-5 py-4 text-muted-foreground">
+                                <div className="min-w-[150px]">
+                                  <span
+                                    className={cn(
+                                      "inline-flex rounded-full border px-2.5 py-1 text-xs font-medium",
+                                      sourceColor[normalizeLeadSource(lead.source)],
+                                    )}
+                                  >
+                                    {normalizeLeadSource(lead.source)}
+                                  </span>
+                                  {formatCaptureOriginSummary(lead.captureOrigin) ? (
+                                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                                      {formatCaptureOriginSummary(lead.captureOrigin)}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </td>
                               <td className="px-5 py-4 text-muted-foreground">
                                 <div className="max-w-[280px] whitespace-pre-wrap break-words text-sm leading-6">
                                   {lead.notes?.trim() || "No notes"}
@@ -803,6 +852,19 @@ export default function Leads() {
                     <p className="text-sm text-foreground">{formatLeadCreatedAt(selectedLead.createdAt)}</p>
                   </div>
                   <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Source</p>
+                    <div className="space-y-1">
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full border px-2.5 py-1 text-xs font-medium",
+                          sourceColor[normalizeLeadSource(selectedLead.source)],
+                        )}
+                      >
+                        {normalizeLeadSource(selectedLead.source)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Status</p>
                     <Select value={selectedLead.status} onValueChange={(value) => void handleLeadStatusChange(value as BackendLeadStatus)}>
                       <SelectTrigger className="h-11 rounded-2xl" disabled={isUpdatingLead}>
@@ -821,6 +883,23 @@ export default function Leads() {
                     </p>
                   </div>
                 </div>
+
+                {formatCaptureValue(selectedLead.captureOrigin) || formatCaptureValue(selectedLead.captureReferer) ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {formatCaptureValue(selectedLead.captureOrigin) ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Capture Origin</p>
+                        <p className="break-all text-sm text-foreground">{formatCaptureValue(selectedLead.captureOrigin)}</p>
+                      </div>
+                    ) : null}
+                    {formatCaptureValue(selectedLead.captureReferer) ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Capture Referer</p>
+                        <p className="break-all text-sm text-foreground">{formatCaptureValue(selectedLead.captureReferer)}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="space-y-1">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Notes</p>
