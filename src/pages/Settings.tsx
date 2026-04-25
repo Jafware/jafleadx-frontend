@@ -391,6 +391,9 @@ export default function SettingsPage() {
                 placeholder="+91 98765 43210"
                 disabled={isLoading}
               />
+              <p className="text-xs leading-6 text-muted-foreground">
+                Use the same Twilio WhatsApp sender number that receives inbound messages. Example: `+919999999999`
+              </p>
             </div>
 
             <div className="space-y-2">
