@@ -103,6 +103,10 @@ export interface Settings {
   publicCaptureEnabled: boolean;
   publicCaptureSiteKey: string;
   publicCaptureAllowedOrigins: string[];
+  websiteUrl: string;
+  websiteKnowledgeText: string;
+  websiteKnowledgeUpdatedAt: string | null;
+  websiteKnowledgeError: string;
   tone: string;
   businessDescription: string;
   automationEnabled: boolean;

@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BrainCircuit, Copy, Globe, Plus, RefreshCw, Shield, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { FaqItem, Settings } from "@/types/app";
 
@@ -127,10 +127,28 @@ function buildEmbedInstructions(siteKey: string, allowedOrigins: string[]) {
   ].join("\n");
 }
 
+function formatWebsiteKnowledgeTimestamp(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleString();
+}
+
 export default function SettingsPage() {
   const { data, saveSettings } = useAppData();
   const [businessType, setBusinessType] = useState(data.settings.businessType);
   const [whatsappNumber, setWhatsappNumber] = useState(data.settings.whatsappNumber);
+  const [websiteUrl, setWebsiteUrl] = useState(data.settings.websiteUrl);
+  const [websiteKnowledgeText, setWebsiteKnowledgeText] = useState(data.settings.websiteKnowledgeText);
+  const [websiteKnowledgeUpdatedAt, setWebsiteKnowledgeUpdatedAt] = useState(data.settings.websiteKnowledgeUpdatedAt);
+  const [websiteKnowledgeError, setWebsiteKnowledgeError] = useState(data.settings.websiteKnowledgeError);
   const [publicCaptureEnabled, setPublicCaptureEnabled] = useState(data.settings.publicCaptureEnabled);
   const [publicCaptureSiteKey, setPublicCaptureSiteKey] = useState(data.settings.publicCaptureSiteKey);
   const [publicCaptureAllowedOriginsText, setPublicCaptureAllowedOriginsText] = useState(
@@ -142,8 +160,46 @@ export default function SettingsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshingWebsiteKnowledge, setIsRefreshingWebsiteKnowledge] = useState(false);
   const [pendingSiteKeyAction, setPendingSiteKeyAction] = useState<PublicCaptureSiteKeyAction | null>(null);
   const [publicCaptureError, setPublicCaptureError] = useState<string | null>(null);
+
+  const applySettingsToState = useCallback((settings: Partial<Settings>) => {
+    setBusinessType(settings.businessType || data.settings.businessType);
+    setWhatsappNumber(settings.whatsappNumber || data.settings.whatsappNumber);
+    setWebsiteUrl(settings.websiteUrl || data.settings.websiteUrl);
+    setWebsiteKnowledgeText(settings.websiteKnowledgeText || "");
+    setWebsiteKnowledgeUpdatedAt(settings.websiteKnowledgeUpdatedAt || null);
+    setWebsiteKnowledgeError(settings.websiteKnowledgeError || "");
+    setPublicCaptureEnabled(settings.publicCaptureEnabled ?? data.settings.publicCaptureEnabled);
+    setPublicCaptureSiteKey(settings.publicCaptureSiteKey || data.settings.publicCaptureSiteKey);
+    setPublicCaptureAllowedOriginsText(
+      Array.isArray(settings.publicCaptureAllowedOrigins)
+        ? settings.publicCaptureAllowedOrigins.join("\n")
+        : data.settings.publicCaptureAllowedOrigins.join("\n"),
+    );
+    setTone(settings.tone || data.settings.tone);
+    setFaqs(
+      Array.isArray(settings.faqs) && settings.faqs.length > 0
+        ? settings.faqs.map((faq, index) => ({
+            id: faq.id ?? index + 1,
+            question: faq.question ?? "",
+            answer: faq.answer ?? "",
+          }))
+        : data.settings.faqs.length > 0
+          ? data.settings.faqs
+          : [{ id: 1, question: "", answer: "" }],
+    );
+  }, [
+    data.settings.businessType,
+    data.settings.faqs,
+    data.settings.publicCaptureAllowedOrigins,
+    data.settings.publicCaptureEnabled,
+    data.settings.publicCaptureSiteKey,
+    data.settings.tone,
+    data.settings.websiteUrl,
+    data.settings.whatsappNumber,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,27 +216,7 @@ export default function SettingsPage() {
         const settings = payload.data?.settings;
 
         if (!cancelled && settings) {
-          setBusinessType(settings.businessType || data.settings.businessType);
-          setWhatsappNumber(settings.whatsappNumber || data.settings.whatsappNumber);
-          setPublicCaptureEnabled(settings.publicCaptureEnabled ?? data.settings.publicCaptureEnabled);
-          setPublicCaptureSiteKey(settings.publicCaptureSiteKey || data.settings.publicCaptureSiteKey);
-          setPublicCaptureAllowedOriginsText(
-            Array.isArray(settings.publicCaptureAllowedOrigins)
-              ? settings.publicCaptureAllowedOrigins.join("\n")
-              : data.settings.publicCaptureAllowedOrigins.join("\n"),
-          );
-          setTone(settings.tone || data.settings.tone);
-          setFaqs(
-            Array.isArray(settings.faqs) && settings.faqs.length > 0
-              ? settings.faqs.map((faq, index) => ({
-                  id: faq.id ?? index + 1,
-                  question: faq.question ?? "",
-                  answer: faq.answer ?? "",
-                }))
-              : data.settings.faqs.length > 0
-                ? data.settings.faqs
-                : [{ id: 1, question: "", answer: "" }],
-          );
+          applySettingsToState(settings);
         }
       } catch (error) {
         if (!cancelled) {
@@ -199,11 +235,16 @@ export default function SettingsPage() {
       cancelled = true;
     };
   }, [
+    applySettingsToState,
     data.settings.businessType,
     data.settings.faqs,
     data.settings.publicCaptureAllowedOrigins,
     data.settings.publicCaptureEnabled,
     data.settings.publicCaptureSiteKey,
+    data.settings.websiteKnowledgeError,
+    data.settings.websiteKnowledgeText,
+    data.settings.websiteKnowledgeUpdatedAt,
+    data.settings.websiteUrl,
     data.settings.tone,
     data.settings.whatsappNumber,
   ]);
@@ -249,6 +290,10 @@ export default function SettingsPage() {
       ...data.settings,
       businessType,
       whatsappNumber,
+      websiteUrl: websiteUrl.trim(),
+      websiteKnowledgeText,
+      websiteKnowledgeUpdatedAt,
+      websiteKnowledgeError,
       publicCaptureEnabled,
       publicCaptureSiteKey,
       publicCaptureAllowedOrigins: normalizedAllowedOrigins,
@@ -295,13 +340,7 @@ export default function SettingsPage() {
       } as Settings;
 
       saveSettings(mergedSettings);
-      setPublicCaptureEnabled(mergedSettings.publicCaptureEnabled ?? false);
-      setPublicCaptureSiteKey(mergedSettings.publicCaptureSiteKey || "");
-      setPublicCaptureAllowedOriginsText(
-        Array.isArray(mergedSettings.publicCaptureAllowedOrigins)
-          ? mergedSettings.publicCaptureAllowedOrigins.join("\n")
-          : "",
-      );
+      applySettingsToState(mergedSettings);
 
       toast.success(options?.successMessage || "Settings saved.");
     } catch (error) {
@@ -314,6 +353,46 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     await persistSettings({ successMessage: "Settings saved." });
+  };
+
+  const handleRefreshWebsiteKnowledge = async () => {
+    setIsRefreshingWebsiteKnowledge(true);
+
+    try {
+      const response = await apiFetch("/api/settings/website-knowledge/refresh", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          websiteUrl: websiteUrl.trim(),
+        }),
+      });
+      const payload = await parseApiJson<SettingsApiResponse>(response);
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Unable to refresh website knowledge.");
+      }
+
+      const savedSettings = payload.data?.settings;
+
+      if (!savedSettings) {
+        throw new Error("Website knowledge refresh completed but no settings payload was returned.");
+      }
+
+      const mergedSettings = {
+        ...data.settings,
+        ...savedSettings,
+      } as Settings;
+
+      saveSettings(mergedSettings);
+      applySettingsToState(mergedSettings);
+      toast.success("Website knowledge refreshed.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to refresh website knowledge.");
+    } finally {
+      setIsRefreshingWebsiteKnowledge(false);
+    }
   };
 
   const handleCopy = async (value: string, successMessage: string) => {
@@ -339,6 +418,7 @@ export default function SettingsPage() {
   }
 
   const embedInstructions = buildEmbedInstructions(publicCaptureSiteKey, embedInstructionOrigins);
+  const formattedWebsiteKnowledgeUpdatedAt = formatWebsiteKnowledgeTimestamp(websiteKnowledgeUpdatedAt);
 
   return (
     <AppLayout>
@@ -410,6 +490,95 @@ export default function SettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(210_32%_9%))] p-6 shadow-[0_18px_50px_hsl(210_40%_4%/0.32)]"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Globe className="h-5 w-5" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-foreground">Website Knowledge</h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                Save your website URL and refresh a text snapshot the AI can use when answering lead questions.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-5">
+            <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="website-url">Website URL</Label>
+                <Input
+                  id="website-url"
+                  type="url"
+                  value={websiteUrl}
+                  onChange={(event) => setWebsiteUrl(event.target.value)}
+                  placeholder="https://yourwebsite.com"
+                  disabled={isLoading || isSaving || isRefreshingWebsiteKnowledge}
+                />
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Use your main public website URL. The refresh action imports a safe text snapshot from that page only.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isLoading || isSaving || isRefreshingWebsiteKnowledge || !websiteUrl.trim()}
+                onClick={() => void handleRefreshWebsiteKnowledge()}
+                className="h-11 rounded-2xl px-4"
+              >
+                {isRefreshingWebsiteKnowledge ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Refresh Website Knowledge
+              </Button>
+            </div>
+
+            {websiteKnowledgeError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Website knowledge refresh failed</AlertTitle>
+                <AlertDescription>{websiteKnowledgeError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {formattedWebsiteKnowledgeUpdatedAt ? (
+              <div className="rounded-[24px] border border-border/70 bg-secondary/20 px-5 py-4">
+                <p className="text-sm font-medium text-foreground">Last refreshed</p>
+                <p className="mt-1 text-sm text-muted-foreground">{formattedWebsiteKnowledgeUpdatedAt}</p>
+              </div>
+            ) : null}
+
+            <div className="rounded-[24px] border border-border/70 bg-black/20 p-5">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Knowledge preview</p>
+                  <p className="text-sm text-muted-foreground">
+                    This is the extracted website text currently available to the AI.
+                  </p>
+                </div>
+                {websiteKnowledgeText ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isLoading || isSaving || isRefreshingWebsiteKnowledge}
+                    onClick={() => void handleCopy(websiteKnowledgeText, "Website knowledge copied.")}
+                    className="h-10 rounded-2xl px-4"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Preview
+                  </Button>
+                ) : null}
+              </div>
+              <Textarea
+                value={websiteKnowledgeText || "No website knowledge has been imported yet."}
+                readOnly
+                rows={10}
+                className="rounded-2xl border-border/70 bg-secondary/20 text-xs leading-6"
+              />
             </div>
           </div>
         </section>
