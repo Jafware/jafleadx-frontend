@@ -155,6 +155,13 @@ export default function SettingsPage() {
     data.settings.publicCaptureAllowedOrigins.join("\n"),
   );
   const [tone, setTone] = useState(data.settings.tone);
+  const [businessDescription, setBusinessDescription] = useState(data.settings.businessDescription);
+  const [servicesOffered, setServicesOffered] = useState(data.settings.servicesOffered);
+  const [pricingInfo, setPricingInfo] = useState(data.settings.pricingInfo);
+  const [targetCustomers, setTargetCustomers] = useState(data.settings.targetCustomers);
+  const [primaryCTA, setPrimaryCTA] = useState(data.settings.primaryCTA);
+  const [commonObjections, setCommonObjections] = useState(data.settings.commonObjections);
+  const [customInstructions, setCustomInstructions] = useState(data.settings.customInstructions);
   const [faqs, setFaqs] = useState<FaqItem[]>(
     data.settings.faqs.length > 0 ? data.settings.faqs : [{ id: 1, question: "", answer: "" }],
   );
@@ -179,6 +186,13 @@ export default function SettingsPage() {
         : data.settings.publicCaptureAllowedOrigins.join("\n"),
     );
     setTone(settings.tone || data.settings.tone);
+    setBusinessDescription(settings.businessDescription || "");
+    setServicesOffered(settings.servicesOffered || "");
+    setPricingInfo(settings.pricingInfo || "");
+    setTargetCustomers(settings.targetCustomers || "");
+    setPrimaryCTA(settings.primaryCTA || "");
+    setCommonObjections(settings.commonObjections || "");
+    setCustomInstructions(settings.customInstructions || "");
     setFaqs(
       Array.isArray(settings.faqs) && settings.faqs.length > 0
         ? settings.faqs.map((faq, index) => ({
@@ -298,6 +312,13 @@ export default function SettingsPage() {
       publicCaptureSiteKey,
       publicCaptureAllowedOrigins: normalizedAllowedOrigins,
       tone,
+      businessDescription: businessDescription.trim(),
+      servicesOffered: servicesOffered.trim(),
+      pricingInfo: pricingInfo.trim(),
+      targetCustomers: targetCustomers.trim(),
+      primaryCTA: primaryCTA.trim(),
+      commonObjections: commonObjections.trim(),
+      customInstructions: customInstructions.trim(),
       faqs: faqs
         .map((faq, index) => ({
           id: index + 1,
@@ -490,6 +511,114 @@ export default function SettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_28%_9%))] p-6 shadow-[0_18px_50px_hsl(222_40%_4%/0.32)]"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <BrainCircuit className="h-5 w-5" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-foreground">AI Business Profile</h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                This gives your WhatsApp AI better sales context so it can answer service, pricing, and business-fit questions more naturally.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="business-description">What does your business do?</Label>
+              <Textarea
+                id="business-description"
+                rows={4}
+                value={businessDescription}
+                onChange={(event) => setBusinessDescription(event.target.value)}
+                placeholder="Describe what your business does in plain language."
+                disabled={isLoading || isSaving}
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="services-offered">Services/products offered</Label>
+              <Textarea
+                id="services-offered"
+                rows={4}
+                value={servicesOffered}
+                onChange={(event) => setServicesOffered(event.target.value)}
+                placeholder="List your main services, products, or outcomes the AI should mention."
+                disabled={isLoading || isSaving}
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pricing-info">Pricing information</Label>
+              <Textarea
+                id="pricing-info"
+                rows={4}
+                value={pricingInfo}
+                onChange={(event) => setPricingInfo(event.target.value)}
+                placeholder="Add pricing guidance, plan notes, or how the AI should answer pricing questions."
+                disabled={isLoading || isSaving}
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="target-customers">Ideal customers</Label>
+              <Textarea
+                id="target-customers"
+                rows={4}
+                value={targetCustomers}
+                onChange={(event) => setTargetCustomers(event.target.value)}
+                placeholder="Who is this best for? Industry, business type, or use case."
+                disabled={isLoading || isSaving}
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="primary-cta">Main call-to-action</Label>
+              <Input
+                id="primary-cta"
+                value={primaryCTA}
+                onChange={(event) => setPrimaryCTA(event.target.value)}
+                placeholder="Book a demo, request a quote, schedule a consultation"
+                disabled={isLoading || isSaving}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="custom-instructions">Extra AI instructions</Label>
+              <Textarea
+                id="custom-instructions"
+                value={customInstructions}
+                onChange={(event) => setCustomInstructions(event.target.value)}
+                placeholder="Any extra guidance for tone, positioning, or sales behavior"
+                disabled={isLoading || isSaving}
+                rows={3}
+                className="rounded-2xl"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="common-objections">Common objections / answers</Label>
+              <Textarea
+                id="common-objections"
+                rows={4}
+                value={commonObjections}
+                onChange={(event) => setCommonObjections(event.target.value)}
+                placeholder="Example: Setup takes too long — explain onboarding is quick and guided."
+                disabled={isLoading || isSaving}
+                className="rounded-2xl"
+              />
             </div>
           </div>
         </section>

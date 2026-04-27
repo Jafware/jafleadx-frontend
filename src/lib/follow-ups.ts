@@ -59,6 +59,13 @@ export function normalizeSettings(settings: Settings): Settings {
     websiteKnowledgeError: settings.websiteKnowledgeError?.trim() || "",
     automationEnabled: settings.automationEnabled ?? true,
     tone: settings.tone?.trim() || "friendly",
+    businessDescription: settings.businessDescription?.trim() || "",
+    servicesOffered: settings.servicesOffered?.trim() || "",
+    pricingInfo: settings.pricingInfo?.trim() || "",
+    targetCustomers: settings.targetCustomers?.trim() || "",
+    primaryCTA: settings.primaryCTA?.trim() || "",
+    commonObjections: settings.commonObjections?.trim() || "",
+    customInstructions: settings.customInstructions?.trim() || "",
     faqs: settings.faqs ?? [],
     followUps: DEFAULT_FOLLOW_UP_STEPS.map((_, index) => normalizeFollowUpStep(settings.followUps?.[index], index)),
   };

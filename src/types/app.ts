@@ -109,6 +109,12 @@ export interface Settings {
   websiteKnowledgeError: string;
   tone: string;
   businessDescription: string;
+  servicesOffered: string;
+  pricingInfo: string;
+  targetCustomers: string;
+  primaryCTA: string;
+  commonObjections: string;
+  customInstructions: string;
   automationEnabled: boolean;
   faqs: FaqItem[];
   followUps: FollowUpStep[];
