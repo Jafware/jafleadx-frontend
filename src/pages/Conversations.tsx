@@ -1,14 +1,14 @@
 import { AppLayout } from "@/components/AppLayout";
 import { useAppData } from "@/context/AppDataContext";
 import { useBilling } from "@/context/BillingContext";
-import { apiFetch, parseApiJson } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { requestOpenAiReply } from "@/lib/openai-chat";
 import { fetchTwilioConversations, sendTwilioConversationMessage, updateTwilioConversationMode } from "@/lib/twilio-api";
-import { Bot, CheckCheck, MessageCircleMore, PanelLeftOpen, Search, Send, Sparkles, UserRound, WandSparkles } from "lucide-react";
-import { FormEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Bot, CheckCheck, Clock3, MessageCircleMore, PanelLeftOpen, Search, Send, Sparkles, UserRound, WandSparkles } from "lucide-react";
+import { FormEvent, KeyboardEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Conversation, ConversationMessage, EntityId } from "@/types/app";
 
@@ -34,13 +34,50 @@ function MessageStatus({ status }: { status?: "sending" | "sent" | "delivered" |
   );
 }
 
-interface ChatSendApiResponse {
-  data?: {
-    conversationId?: string;
-    message?: ConversationMessage;
-    response?: ConversationMessage;
-  };
-  message?: string;
+function parseTimestamp(value?: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatMessageTimestamp(message: ConversationMessage) {
+  const date = parseTimestamp(message.createdAt);
+
+  if (!date) {
+    return message.time || "";
+  }
+
+  return new Intl.DateTimeFormat([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatConversationTimestamp(conversation: Conversation) {
+  const latestMessage = conversation.messages[conversation.messages.length - 1];
+  const date = parseTimestamp(latestMessage?.createdAt);
+
+  if (!date) {
+    return conversation.time;
+  }
+
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+
+  return new Intl.DateTimeFormat([], isToday ? { hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric" }).format(date);
+}
+
+function getChannelLabel(channel: string) {
+  if (channel.toLowerCase().includes("whatsapp")) {
+    return "WhatsApp";
+  }
+
+  return channel;
 }
 
 function createLocalChatMessage(
@@ -256,7 +293,7 @@ export default function Conversations() {
     }
 
     const message = input.trim();
-    const optimisticLeadMessage = createLocalChatMessage("lead", message, {
+    const optimisticAgentMessage = createLocalChatMessage("agent", message, {
       status: "sending",
     });
     setIsSending(true);
@@ -269,55 +306,13 @@ export default function Conversations() {
         unread: false,
         time: "Just now",
         lastMsg: message,
-        messages: [...activeConversation.messages, optimisticLeadMessage],
+        messages: [...activeConversation.messages, optimisticAgentMessage],
       },
     }));
 
     void (async () => {
       try {
-        const response = await apiFetch("/api/chat/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            leadId: String(activeConversation.leadId),
-            message,
-          }),
-        });
-        const payload = await parseApiJson<ChatSendApiResponse>(response);
-
-        if (!response.ok) {
-          throw new Error(payload.message || "Unable to send message through chat API.");
-        }
-
-        const savedLeadMessage =
-          payload.data?.message ||
-          createLocalChatMessage("lead", message, {
-            status: "sent",
-          });
-        const savedAiMessage =
-          payload.data?.response ||
-          createLocalChatMessage("ai", "AI reply received.", {
-            isAi: true,
-            status: "read",
-          });
-
-        setConversationOverrides((current) => ({
-          ...current,
-          [activeConversation.id]: {
-            ...current[activeConversation.id],
-            status: "Pending reply",
-            unread: false,
-            time: "Just now",
-            lastMsg: savedAiMessage.text,
-            messages: [...activeConversation.messages, savedLeadMessage, savedAiMessage],
-          },
-        }));
-
-        toast.success("Message sent and AI response received.");
-      } catch (apiError) {
-        try {
+        if (twilioConfigured && serverConversations.length > 0) {
           await sendTwilioConversationMessage({
             conversationId: activeConversation.id,
             body: message,
@@ -333,21 +328,34 @@ export default function Conversations() {
             delete next[activeConversation.id];
             return next;
           });
-          toast.success("Manual reply sent.");
-        } catch (fallbackError) {
-          setConversationOverrides((current) => {
-            const next = { ...current };
-            delete next[activeConversation.id];
-            return next;
-          });
-          toast.error(
-            fallbackError instanceof Error
-              ? fallbackError.message
-              : apiError instanceof Error
-                ? apiError.message
-                : "Unable to send message.",
-          );
+          toast.success("Manual WhatsApp reply sent.");
+          return;
         }
+
+        const savedAgentMessage = createLocalChatMessage("agent", message, {
+          status: "sent",
+        });
+        sendMessage(activeConversation.id, message, "agent");
+        setConversationOverrides((current) => ({
+          ...current,
+          [activeConversation.id]: {
+            ...current[activeConversation.id],
+            status: "Active",
+            unread: false,
+            time: "Just now",
+            lastMsg: message,
+            messages: [...activeConversation.messages, savedAgentMessage],
+          },
+        }));
+
+        toast.success("Manual reply added.");
+      } catch (apiError) {
+        setConversationOverrides((current) => {
+          const next = { ...current };
+          delete next[activeConversation.id];
+          return next;
+        });
+        toast.error(apiError instanceof Error ? apiError.message : "Unable to send message.");
       } finally {
         setIsSending(false);
       }
@@ -403,17 +411,51 @@ export default function Conversations() {
     }
   };
 
+  const handleModeChange = (mode: "ai" | "manual") => {
+    if (!activeConversation) {
+      return;
+    }
+
+    setConversationMode(activeConversation.id, mode);
+    setServerConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === activeConversation.id ? { ...conversation, mode } : conversation,
+      ),
+    );
+
+    if (twilioConfigured && serverConversations.length > 0) {
+      void updateTwilioConversationMode(activeConversation.id, mode).catch(() => {
+        toast.error(mode === "ai" ? "Unable to sync AI autopilot state to the server." : "Unable to sync manual override state to the server.");
+      });
+    }
+
+    if (mode === "manual") {
+      setTypingConversationId((current) => (current === activeConversation.id ? null : current));
+    }
+
+    toast.success(mode === "ai" ? "AI autopilot enabled." : "Manual override enabled.");
+  };
+
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  };
+
   const activeMode = activeConversation?.mode ?? "ai";
   const canUseAiDrafts = hasFeature("aiDrafts");
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-semibold tracking-[-0.03em] text-foreground">Conversations</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
-              WhatsApp-style inbox with a conversation list on the left and a live chat workspace on the right.
+            <h1 className="font-display text-2xl font-semibold tracking-[-0.03em] text-foreground sm:text-3xl">Conversations</h1>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Review live WhatsApp conversations, switch handoff mode, and reply from one focused workspace.
             </p>
           </div>
           <div
@@ -426,13 +468,13 @@ export default function Conversations() {
         </div>
 
         <div
-          className="overflow-hidden rounded-[34px] border border-border/80 bg-[#0b141a]"
-          style={{ boxShadow: "var(--shadow-card)", height: "calc(100vh - 220px)" }}
+          className="overflow-hidden rounded-[28px] border border-border/80 bg-[#0b141a]"
+          style={{ boxShadow: "var(--shadow-card)", height: "calc(100vh - 150px)", minHeight: "660px" }}
         >
           <div className="flex h-full">
             <aside
               className={cn(
-                "absolute inset-y-0 left-0 z-20 w-full max-w-sm border-r border-white/5 bg-[#111b21] transition-transform md:static md:w-[360px] md:translate-x-0",
+                "absolute inset-y-0 left-0 z-20 w-full max-w-sm border-r border-white/5 bg-[#111b21] transition-transform md:static md:w-[380px] md:translate-x-0 lg:w-[410px]",
                 sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
               )}
             >
@@ -478,6 +520,7 @@ export default function Conversations() {
                 ) : null}
                 {conversations.map((conversation) => {
                   const isActive = conversation.id === activeConversation?.id;
+                  const lastSeen = formatConversationTimestamp(conversation);
 
                   return (
                     <button
@@ -503,7 +546,11 @@ export default function Conversations() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-3">
                           <p className="truncate text-sm font-semibold tracking-[-0.01em] text-white">{conversation.name}</p>
-                          <span className="shrink-0 text-[11px] text-slate-400">{conversation.time}</span>
+                          <span className="shrink-0 text-[11px] text-slate-400">{lastSeen}</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+                          <span className="rounded-full bg-white/5 px-2 py-0.5">{getChannelLabel(conversation.channel)}</span>
+                          <span>{conversation.status}</span>
                         </div>
                         <div className="mt-1.5 flex items-center justify-between gap-2">
                           <p className="truncate text-xs leading-5 text-slate-400">{conversation.lastMsg}</p>
@@ -543,30 +590,34 @@ export default function Conversations() {
                       <UserRound className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold tracking-[-0.01em] text-white">{activeConversation.name}</p>
-                      <p className="mt-0.5 text-xs text-slate-400">
-                        {typingConversationId === activeConversation.id ? "AI is typing..." : `${activeConversation.channel} • ${activeConversation.status}`}
-                      </p>
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold tracking-[-0.01em] text-white">{activeConversation.name}</p>
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+                            activeMode === "manual" ? "bg-amber-400/15 text-amber-200" : "bg-emerald-400/15 text-emerald-200",
+                          )}
+                        >
+                          {activeMode === "manual" ? "Manual handoff" : "AI autopilot"}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <span>{typingConversationId === activeConversation.id ? "AI is typing..." : activeConversation.status}</span>
+                        <span>•</span>
+                        <span>{getChannelLabel(activeConversation.channel)}</span>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock3 className="h-3 w-3" />
+                          Last message {formatConversationTimestamp(activeConversation)}
+                        </span>
+                      </div>
                     </div>
                     <div className="hidden items-center gap-2 sm:flex">
                       <Button
                         type="button"
                         variant={activeMode === "ai" ? "default" : "secondary"}
                         className={cn(activeMode === "ai" ? "bg-[#25d366] text-[#10261c] hover:bg-[#25d366]/90" : "bg-[#2a3942] text-slate-200 hover:bg-[#33454f]")}
-                        onClick={() => {
-                          setConversationMode(activeConversation.id, "ai");
-                          setServerConversations((current) =>
-                            current.map((conversation) =>
-                              conversation.id === activeConversation.id ? { ...conversation, mode: "ai" } : conversation,
-                            ),
-                          );
-                          if (twilioConfigured && serverConversations.length > 0) {
-                            void updateTwilioConversationMode(activeConversation.id, "ai").catch(() => {
-                              toast.error("Unable to sync AI autopilot state to the server.");
-                            });
-                          }
-                          toast.success("AI autopilot enabled.");
-                        }}
+                        onClick={() => handleModeChange("ai")}
                       >
                         <Bot className="mr-2 h-4 w-4" />
                         AI Autopilot
@@ -575,21 +626,7 @@ export default function Conversations() {
                         type="button"
                         variant={activeMode === "manual" ? "default" : "secondary"}
                         className={cn(activeMode === "manual" ? "bg-amber-400 text-[#2d1c02] hover:bg-amber-300" : "bg-[#2a3942] text-slate-200 hover:bg-[#33454f]")}
-                        onClick={() => {
-                          setConversationMode(activeConversation.id, "manual");
-                          setServerConversations((current) =>
-                            current.map((conversation) =>
-                              conversation.id === activeConversation.id ? { ...conversation, mode: "manual" } : conversation,
-                            ),
-                          );
-                          if (twilioConfigured && serverConversations.length > 0) {
-                            void updateTwilioConversationMode(activeConversation.id, "manual").catch(() => {
-                              toast.error("Unable to sync manual override state to the server.");
-                            });
-                          }
-                          setTypingConversationId((current) => (current === activeConversation.id ? null : current));
-                          toast.success("Manual override enabled.");
-                        }}
+                        onClick={() => handleModeChange("manual")}
                       >
                         <WandSparkles className="mr-2 h-4 w-4" />
                         Manual Override
@@ -599,16 +636,16 @@ export default function Conversations() {
 
                   <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto scroll-smooth bg-[#0b141a] px-4 py-7 sm:px-6 sm:py-8"
+                    className="flex-1 overflow-y-auto scroll-smooth bg-[#0b141a] px-4 py-6 sm:px-6 sm:py-7 lg:px-8"
                     style={{
                       backgroundImage:
                         "radial-gradient(circle at 20% 20%, rgba(37, 211, 102, 0.06), transparent 22%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.04), transparent 18%), linear-gradient(rgba(11,20,26,0.92), rgba(11,20,26,0.96)), linear-gradient(135deg, rgba(255,255,255,0.018) 25%, transparent 25%)",
                       backgroundSize: "auto, auto, auto, 22px 22px",
                     }}
                   >
-                    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+                    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
                       <div className="mx-auto rounded-full border border-white/5 bg-[#1f2c34]/95 px-3.5 py-1 text-[11px] font-medium tracking-[0.12em] text-slate-300">
-                        Conversation history
+                        {activeConversation.messages.length} messages
                       </div>
 
                       {activeConversation.messages.map((message) => {
@@ -620,24 +657,24 @@ export default function Conversations() {
                             : "bg-[linear-gradient(180deg,#123d2f,#103529)] text-[#dffbe5] border border-[#1b644d] rounded-br-md";
 
                         return (
-                          <div key={message.id} className={cn("flex", isIncoming ? "justify-start pr-10" : "justify-end pl-10")}>
-                            <div className="flex max-w-[88%] flex-col gap-1 sm:max-w-[76%]">
-                              <div className={cn("rounded-[24px] px-4 py-3.5 shadow-[0_14px_35px_rgba(0,0,0,0.16)]", bubbleTone)}>
-                              {message.isAi ? (
-                                <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-100">
-                                  <Bot className="h-3 w-3" />
-                                  AI reply
-                                </span>
-                              ) : null}
-                              {message.from === "agent" ? (
-                                <span className="mb-1 inline-flex rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/85">
-                                  Manual reply
-                                </span>
-                              ) : null}
-                              <p className="whitespace-pre-wrap text-sm leading-7 tracking-[-0.01em]">{message.text}</p>
+                          <div key={message.id} className={cn("flex", isIncoming ? "justify-start pr-4 sm:pr-12" : "justify-end pl-4 sm:pl-12")}>
+                            <div className="flex max-w-[94%] flex-col gap-1 sm:max-w-[82%] lg:max-w-[72%]">
+                              <div className={cn("rounded-[22px] px-4 py-3 shadow-[0_14px_35px_rgba(0,0,0,0.16)]", bubbleTone)}>
+                                {message.isAi ? (
+                                  <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-100">
+                                    <Bot className="h-3 w-3" />
+                                    AI reply
+                                  </span>
+                                ) : null}
+                                {message.from === "agent" ? (
+                                  <span className="mb-1.5 inline-flex rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/85">
+                                    Manual reply
+                                  </span>
+                                ) : null}
+                                <p className="whitespace-pre-wrap break-words text-[15px] leading-7 tracking-[-0.01em]">{message.text}</p>
                               </div>
                               <div className={cn("flex items-center gap-1.5 px-1 text-[11px]", isIncoming ? "justify-start text-slate-500" : "justify-end text-white/55")}>
-                                <span className="text-[11px] text-white/55">{message.time}</span>
+                                <span>{formatMessageTimestamp(message)}</span>
                                 {!isIncoming ? <MessageStatus status={message.status} /> : null}
                               </div>
                             </div>
@@ -664,53 +701,77 @@ export default function Conversations() {
                   </div>
 
                   <div className="border-t border-white/5 bg-[linear-gradient(180deg,#111b21,#0f191f)] px-4 py-3 sm:px-5">
-                    <div className="mx-auto flex max-w-4xl flex-col gap-3">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          className="bg-[#202c33] text-slate-200 hover:bg-[#2a3942]"
-                          onClick={handleSimulateLead}
-                          disabled={twilioConfigured && serverConversations.length > 0}
-                        >
-                          {twilioConfigured && serverConversations.length > 0 ? "Webhook-driven inbox" : "Simulate Lead Message"}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          className="bg-[#202c33] text-slate-200 hover:bg-[#2a3942]"
-                          onClick={handleDraftWithAi}
-                          disabled={isGeneratingDraft || !canUseAiDrafts}
-                        >
-                          {!canUseAiDrafts ? "Growth+ AI Drafts" : isGeneratingDraft ? "Drafting..." : "Draft with AI"}
-                        </Button>
-                        <span className={cn("rounded-full px-3 py-1 text-[11px] font-medium", activeMode === "manual" ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300")}>
-                          {activeMode === "manual" ? "Manual override active" : "AI autopilot active"}
-                        </span>
+                    <div className="mx-auto flex max-w-5xl flex-col gap-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2.5">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <div className="flex rounded-full bg-[#202c33] p-1 sm:hidden">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className={cn("h-8 rounded-full px-3 text-xs", activeMode === "ai" ? "bg-[#25d366] text-[#10261c]" : "text-slate-300 hover:bg-[#2a3942]")}
+                              onClick={() => handleModeChange("ai")}
+                            >
+                              AI
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className={cn("h-8 rounded-full px-3 text-xs", activeMode === "manual" ? "bg-amber-400 text-[#2d1c02]" : "text-slate-300 hover:bg-[#2a3942]")}
+                              onClick={() => handleModeChange("manual")}
+                            >
+                              Manual
+                            </Button>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="bg-[#202c33] text-slate-200 hover:bg-[#2a3942]"
+                            onClick={handleSimulateLead}
+                            disabled={twilioConfigured && serverConversations.length > 0}
+                          >
+                            {twilioConfigured && serverConversations.length > 0 ? "Webhook-driven inbox" : "Simulate Lead Message"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="bg-[#202c33] text-slate-200 hover:bg-[#2a3942]"
+                            onClick={handleDraftWithAi}
+                            disabled={isGeneratingDraft || !canUseAiDrafts}
+                          >
+                            {!canUseAiDrafts ? "Growth+ AI Drafts" : isGeneratingDraft ? "Drafting..." : "Draft with AI"}
+                          </Button>
+                          <span className={cn("rounded-full px-3 py-1 text-[11px] font-medium", activeMode === "manual" ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300")}>
+                            {activeMode === "manual" ? "Manual override active" : "AI autopilot active"}
+                          </span>
+                          {!canUseAiDrafts ? <span className="text-xs text-amber-300">Upgrade to Growth to unlock AI draft assist.</span> : null}
+                        </div>
                         <span className="text-xs text-slate-400">
                           {activeMode === "manual"
-                            ? "Your replies send directly and pause automated takeovers."
-                            : "Messages send through the Express chat API and save directly to PostgreSQL."}
+                            ? "Manual replies send as your team."
+                            : "AI can respond automatically; your reply still sends as manual."}
                         </span>
-                        {!canUseAiDrafts ? <span className="text-xs text-amber-300">Upgrade to Growth to unlock AI draft assist.</span> : null}
                       </div>
 
                       <form
                         onSubmit={handleSubmit}
-                        className="flex items-end gap-3 rounded-[26px] border border-white/5 bg-[linear-gradient(180deg,#202c33,#1c2a31)] p-2.5 shadow-[0_18px_44px_rgba(0,0,0,0.2)]"
+                        className="flex items-end gap-3 rounded-[22px] border border-white/5 bg-[linear-gradient(180deg,#202c33,#1c2a31)] p-2.5 shadow-[0_18px_44px_rgba(0,0,0,0.2)]"
                       >
-                        <Input
+                        <Textarea
                           value={input}
                           onChange={(event) => setInput(event.target.value)}
-                          placeholder="Send a message and get an AI reply..."
-                          className="min-h-12 flex-1 border-none bg-transparent px-3 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          onKeyDown={handleComposerKeyDown}
+                          placeholder="Write a manual reply..."
+                          className="max-h-36 min-h-12 flex-1 resize-none border-none bg-transparent px-3 py-3 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
                         <Button
                           type="submit"
                           size="icon"
-                          disabled={isSending}
+                          aria-label="Send manual reply"
+                          disabled={isSending || !input.trim()}
                           className="h-12 w-12 rounded-2xl bg-[#25d366] text-[#0d1f19] hover:bg-[#25d366]/90"
                         >
                           <Send className="h-4 w-4" />
