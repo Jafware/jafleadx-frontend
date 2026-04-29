@@ -450,16 +450,16 @@ export default function Conversations() {
 
   return (
     <AppLayout>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-semibold tracking-[-0.03em] text-foreground sm:text-3xl">Conversations</h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+            <h1 className="font-display text-xl font-semibold tracking-[-0.03em] text-foreground sm:text-2xl">Conversations</h1>
+            <p className="mt-0.5 max-w-2xl text-xs leading-5 text-muted-foreground sm:text-sm">
               Review live WhatsApp conversations, switch handoff mode, and reply from one focused workspace.
             </p>
           </div>
           <div
-            className="flex items-center gap-2 self-start rounded-full border border-border/80 bg-card/80 px-3.5 py-1.5 text-xs font-medium text-muted-foreground"
+            className="hidden items-center gap-2 self-start rounded-full border border-border/80 bg-card/80 px-3 py-1 text-xs font-medium text-muted-foreground lg:flex"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
             <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -468,8 +468,8 @@ export default function Conversations() {
         </div>
 
         <div
-          className="overflow-hidden rounded-[28px] border border-border/80 bg-[#0b141a]"
-          style={{ boxShadow: "var(--shadow-card)", height: "calc(100vh - 150px)", minHeight: "660px" }}
+          className="overflow-hidden rounded-[22px] border border-border/80 bg-[#0b141a]"
+          style={{ boxShadow: "var(--shadow-card)", height: "calc(100vh - 104px)", minHeight: "720px" }}
         >
           <div className="flex h-full">
             <aside
@@ -478,10 +478,10 @@ export default function Conversations() {
                 sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
               )}
             >
-              <div className="border-b border-white/5 bg-[linear-gradient(180deg,#202c33,#1b262d)] px-4 py-4">
-                <div className="mb-4 flex items-center justify-between">
+              <div className="border-b border-white/5 bg-[linear-gradient(180deg,#202c33,#1b262d)] px-3 py-3">
+                <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#2a3942] text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#2a3942] text-slate-100 shadow-[0_12px_30px_rgba(0,0,0,0.18)]">
                       <MessageCircleMore className="h-5 w-5" />
                     </div>
                     <div>
@@ -507,12 +507,12 @@ export default function Conversations() {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search or start new chat"
-                    className="h-11 rounded-2xl border-white/5 bg-[#111b21] pl-9 text-slate-100 placeholder:text-slate-500"
+                    className="h-10 rounded-2xl border-white/5 bg-[#111b21] pl-9 text-slate-100 placeholder:text-slate-500"
                   />
                 </div>
               </div>
 
-              <div className="h-[calc(100%-97px)] overflow-y-auto bg-[#111b21]">
+              <div className="h-[calc(100%-85px)] overflow-y-auto bg-[#111b21]">
                 {syncIssue ? (
                   <div className="border-b border-white/5 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
                     {syncIssue}
@@ -531,7 +531,7 @@ export default function Conversations() {
                         setSidebarOpen(false);
                       }}
                       className={cn(
-                        "flex w-full items-start gap-3 border-b border-white/5 px-4 py-4 text-left transition-all duration-200",
+                        "flex w-full items-start gap-3 border-b border-white/5 px-3 py-3 text-left transition-all duration-200",
                         isActive ? "bg-[linear-gradient(180deg,rgba(31,44,51,0.98),rgba(27,38,45,0.98))]" : "hover:bg-white/[0.03]",
                       )}
                     >
@@ -576,7 +576,7 @@ export default function Conversations() {
             <div className="relative flex min-w-0 flex-1 flex-col bg-[#0b141a]">
               {activeConversation ? (
                 <>
-                  <div className="flex items-center gap-3 border-b border-white/5 bg-[linear-gradient(180deg,#202c33,#1b262d)] px-4 py-3.5 sm:px-5">
+                  <div className="flex items-center gap-3 border-b border-white/5 bg-[linear-gradient(180deg,#202c33,#1b262d)] px-4 py-2.5 sm:px-5">
                     <Button
                       type="button"
                       variant="ghost"
@@ -586,7 +586,7 @@ export default function Conversations() {
                     >
                       <PanelLeftOpen className="h-4 w-4" />
                     </Button>
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#2a3942] text-slate-100">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#2a3942] text-slate-100">
                       <UserRound className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -636,15 +636,15 @@ export default function Conversations() {
 
                   <div
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto scroll-smooth bg-[#0b141a] px-4 py-6 sm:px-6 sm:py-7 lg:px-8"
+                    className="min-h-0 flex-1 overflow-y-auto scroll-smooth bg-[#0b141a] px-4 py-4 sm:px-6 sm:py-5 lg:px-8"
                     style={{
                       backgroundImage:
                         "radial-gradient(circle at 20% 20%, rgba(37, 211, 102, 0.06), transparent 22%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.04), transparent 18%), linear-gradient(rgba(11,20,26,0.92), rgba(11,20,26,0.96)), linear-gradient(135deg, rgba(255,255,255,0.018) 25%, transparent 25%)",
                       backgroundSize: "auto, auto, auto, 22px 22px",
                     }}
                   >
-                    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
-                      <div className="mx-auto rounded-full border border-white/5 bg-[#1f2c34]/95 px-3.5 py-1 text-[11px] font-medium tracking-[0.12em] text-slate-300">
+                    <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
+                      <div className="mx-auto rounded-full border border-white/5 bg-[#1f2c34]/95 px-3 py-0.5 text-[10px] font-medium tracking-[0.12em] text-slate-300">
                         {activeConversation.messages.length} messages
                       </div>
 
@@ -700,9 +700,9 @@ export default function Conversations() {
                     </div>
                   </div>
 
-                  <div className="border-t border-white/5 bg-[linear-gradient(180deg,#111b21,#0f191f)] px-4 py-3 sm:px-5">
-                    <div className="mx-auto flex max-w-5xl flex-col gap-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="sticky bottom-0 shrink-0 border-t border-white/5 bg-[linear-gradient(180deg,#111b21,#0f191f)] px-4 py-2 sm:px-5">
+                    <div className="mx-auto flex max-w-5xl flex-col gap-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-2.5">
                           <div className="flex rounded-full bg-[#202c33] p-1 sm:hidden">
                             <Button
@@ -728,7 +728,7 @@ export default function Conversations() {
                             type="button"
                             size="sm"
                             variant="secondary"
-                            className="bg-[#202c33] text-slate-200 hover:bg-[#2a3942]"
+                            className="h-8 bg-[#202c33] text-xs text-slate-200 hover:bg-[#2a3942]"
                             onClick={handleSimulateLead}
                             disabled={twilioConfigured && serverConversations.length > 0}
                           >
@@ -738,7 +738,7 @@ export default function Conversations() {
                             type="button"
                             size="sm"
                             variant="secondary"
-                            className="bg-[#202c33] text-slate-200 hover:bg-[#2a3942]"
+                            className="h-8 bg-[#202c33] text-xs text-slate-200 hover:bg-[#2a3942]"
                             onClick={handleDraftWithAi}
                             disabled={isGeneratingDraft || !canUseAiDrafts}
                           >
@@ -765,14 +765,14 @@ export default function Conversations() {
                           onChange={(event) => setInput(event.target.value)}
                           onKeyDown={handleComposerKeyDown}
                           placeholder="Write a manual reply..."
-                          className="max-h-36 min-h-12 flex-1 resize-none border-none bg-transparent px-3 py-3 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className="max-h-28 min-h-11 flex-1 resize-none border-none bg-transparent px-3 py-2.5 text-slate-100 placeholder:text-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
                         <Button
                           type="submit"
                           size="icon"
                           aria-label="Send manual reply"
                           disabled={isSending || !input.trim()}
-                          className="h-12 w-12 rounded-2xl bg-[#25d366] text-[#0d1f19] hover:bg-[#25d366]/90"
+                          className="h-11 w-11 rounded-2xl bg-[#25d366] text-[#0d1f19] hover:bg-[#25d366]/90"
                         >
                           <Send className="h-4 w-4" />
                         </Button>
