@@ -31,11 +31,11 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary animate-pulse-glow">
-            <Zap className="w-6 h-6 text-primary-foreground" />
+    <div className="flex min-h-[100svh] justify-center overflow-y-auto bg-background px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:items-center sm:py-8">
+      <div className="w-full max-w-sm space-y-5">
+        <div className="space-y-2 text-center">
+          <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary animate-pulse-glow sm:h-12 sm:w-12">
+            <Zap className="h-5 w-5 text-primary-foreground sm:h-6 sm:w-6" />
           </div>
           <h1 className="font-display text-2xl font-bold text-foreground">
             JafLeadX<span className="text-primary"> AI</span>
@@ -43,20 +43,49 @@ export default function Signup() {
           <p className="text-sm text-muted-foreground">Create your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-card p-6 space-y-4" style={{ boxShadow: "var(--shadow-card)" }}>
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6" style={{ boxShadow: "var(--shadow-card)" }}>
           <div className="space-y-2">
-            <Label>Name</Label>
-            <Input value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="John Doe" autoComplete="name" />
+            <Label htmlFor="signup-name">Name</Label>
+            <Input
+              id="signup-name"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder="John Doe"
+              autoComplete="name"
+              required
+              className="h-12"
+            />
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
-            <Input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="you@example.com" autoComplete="email" />
+            <Label htmlFor="signup-email">Email</Label>
+            <Input
+              id="signup-email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              inputMode="email"
+              required
+              className="h-12"
+            />
           </div>
           <div className="space-y-2">
-            <Label>Password</Label>
-            <Input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="••••••••" autoComplete="new-password" />
+            <Label htmlFor="signup-password">Password</Label>
+            <Input
+              id="signup-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              type="password"
+              placeholder="Enter a password"
+              autoComplete="new-password"
+              required
+              className="h-12"
+            />
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="h-12 w-full" disabled={isSubmitting}>
             {isSubmitting ? "Please wait..." : "Create Account"}
           </Button>
         </form>
