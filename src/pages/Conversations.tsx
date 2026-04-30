@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { requestOpenAiReply } from "@/lib/openai-chat";
 import { fetchTwilioConversations, sendTwilioConversationMessage, updateTwilioConversationMode } from "@/lib/twilio-api";
 import { Bot, CheckCheck, Clock3, MessageCircleMore, PanelLeftOpen, Search, Send, Sparkles, UserRound, WandSparkles } from "lucide-react";
-import { FormEvent, KeyboardEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, type CSSProperties, type PointerEvent as ReactPointerEvent, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Conversation, ConversationMessage, EntityId } from "@/types/app";
 
@@ -17,6 +17,15 @@ const simulatedLeadPrompts = [
   "Is there a slot available tomorrow afternoon?",
   "I need help comparing the starter and growth plans.",
 ];
+
+const CONVERSATION_LIST_WIDTH_KEY = "jafleadx:conversations:list-width";
+const DEFAULT_LIST_WIDTH = 360;
+const MIN_LIST_WIDTH = 280;
+const MAX_LIST_WIDTH = 520;
+
+function clampListWidth(width: number) {
+  return Math.min(MAX_LIST_WIDTH, Math.max(MIN_LIST_WIDTH, width));
+}
 
 function MessageStatus({ status }: { status?: "sending" | "sent" | "delivered" | "read" }) {
   if (!status) {
@@ -113,10 +122,22 @@ export default function Conversations() {
   const [isSending, setIsSending] = useState(false);
   const [syncIssue, setSyncIssue] = useState<string | null>(null);
   const [conversationOverrides, setConversationOverrides] = useState<Record<string, Partial<Conversation>>>({});
+  const [conversationListWidth, setConversationListWidth] = useState(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_LIST_WIDTH;
+    }
+
+    const storedWidth = Number(window.localStorage.getItem(CONVERSATION_LIST_WIDTH_KEY));
+    return Number.isFinite(storedWidth) ? clampListWidth(storedWidth) : DEFAULT_LIST_WIDTH;
+  });
   const lastSyncedAtRef = useRef<string | null>(null);
   const typingTimerRef = useRef<number | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const deferredSearch = useDeferredValue(search);
+
+  const splitLayoutStyle = {
+    "--conversation-list-width": `${conversationListWidth}px`,
+  } as CSSProperties;
 
   const baseConversationSource = twilioConfigured && serverConversations.length > 0 ? serverConversations : data.conversations;
   const conversationSource = useMemo(
@@ -176,6 +197,10 @@ export default function Conversations() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(CONVERSATION_LIST_WIDTH_KEY, String(conversationListWidth));
+  }, [conversationListWidth]);
 
   useEffect(() => {
     let cancelled = false;
@@ -436,6 +461,46 @@ export default function Conversations() {
     toast.success(mode === "ai" ? "AI autopilot enabled." : "Manual override enabled.");
   };
 
+  const handlePanelResizeStart = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    const startX = event.clientX;
+    const startWidth = conversationListWidth;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      setConversationListWidth(clampListWidth(startWidth + moveEvent.clientX - startX));
+    };
+
+    const handlePointerUp = () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+  };
+
+  const handlePanelResizeKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      setConversationListWidth((current) => clampListWidth(current + (event.key === "ArrowLeft" ? -24 : 24)));
+    }
+
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      setConversationListWidth(event.key === "Home" ? MIN_LIST_WIDTH : MAX_LIST_WIDTH);
+    }
+  };
+
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== "Enter" || event.shiftKey) {
       return;
@@ -471,10 +536,10 @@ export default function Conversations() {
           className="overflow-hidden rounded-[22px] border border-border/80 bg-[#0b141a]"
           style={{ boxShadow: "var(--shadow-card)", height: "calc(100vh - 104px)", minHeight: "720px" }}
         >
-          <div className="flex h-full">
+          <div className="flex h-full" style={splitLayoutStyle}>
             <aside
               className={cn(
-                "absolute inset-y-0 left-0 z-20 w-full max-w-sm border-r border-white/5 bg-[#111b21] transition-transform md:static md:w-[380px] md:translate-x-0 lg:w-[410px]",
+                "absolute inset-y-0 left-0 z-20 w-full max-w-sm border-r border-white/5 bg-[#111b21] transition-transform md:static md:w-[var(--conversation-list-width)] md:max-w-none md:shrink-0 md:translate-x-0",
                 sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
               )}
             >
@@ -572,6 +637,21 @@ export default function Conversations() {
                 ) : null}
               </div>
             </aside>
+
+            <button
+              type="button"
+              role="separator"
+              aria-label="Resize conversation list"
+              aria-orientation="vertical"
+              aria-valuemin={MIN_LIST_WIDTH}
+              aria-valuemax={MAX_LIST_WIDTH}
+              aria-valuenow={conversationListWidth}
+              className="group hidden w-2 shrink-0 cursor-col-resize items-stretch justify-center bg-[#0b141a] outline-none transition-colors hover:bg-[#16242b] focus-visible:bg-[#16242b] md:flex"
+              onPointerDown={handlePanelResizeStart}
+              onKeyDown={handlePanelResizeKeyDown}
+            >
+              <span className="my-4 w-px rounded-full bg-white/10 transition-colors group-hover:bg-[#25d366]/70 group-focus-visible:bg-[#25d366]" />
+            </button>
 
             <div className="relative flex min-w-0 flex-1 flex-col bg-[#0b141a]">
               {activeConversation ? (
