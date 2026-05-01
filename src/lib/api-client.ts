@@ -1,5 +1,9 @@
 export const AUTH_TOKEN_STORAGE_KEY = "jafleadx-auth-token";
 
+function isDevelopmentMode() {
+  return Boolean(import.meta.env.DEV);
+}
+
 function getProcessEnvApiBaseUrl() {
   if (typeof globalThis === "undefined") {
     return "";
@@ -30,11 +34,22 @@ function sanitizeApiBaseUrl(value: string | undefined) {
   }
 }
 
+function getConfiguredApiBaseUrlCandidate() {
+  return import.meta.env.VITE_API_BASE_URL || getProcessEnvApiBaseUrl();
+}
+
 export function getApiBaseUrl() {
-  const configuredBaseUrl = sanitizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL || getProcessEnvApiBaseUrl());
+  const configuredBaseUrlCandidate = getConfiguredApiBaseUrlCandidate();
+  const configuredBaseUrl = sanitizeApiBaseUrl(configuredBaseUrlCandidate);
 
   if (configuredBaseUrl) {
     return configuredBaseUrl;
+  }
+
+  if (configuredBaseUrlCandidate?.trim() && isDevelopmentMode()) {
+    console.warn("Ignoring invalid VITE_API_BASE_URL. Falling back to current origin.", {
+      value: configuredBaseUrlCandidate,
+    });
   }
 
   if (typeof window !== "undefined") {
@@ -51,6 +66,30 @@ export function buildApiUrl(path: string) {
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${getApiBaseUrl()}${normalizedPath}`;
+}
+
+function getNetworkErrorMessage(url: string) {
+  if (typeof window !== "undefined") {
+    const pageProtocol = window.location.protocol;
+
+    if (pageProtocol === "https:" && url.startsWith("http://")) {
+      return "Unable to reach the API because the app is using HTTPS but the backend URL is HTTP. Please use an HTTPS backend URL.";
+    }
+  }
+
+  return "Unable to reach the API. Please check your internet connection and make sure the backend URL is available.";
+}
+
+function logApiFetchFailure(error: unknown, url: string) {
+  if (!isDevelopmentMode()) {
+    return;
+  }
+
+  console.warn("API request failed before receiving a response.", {
+    url,
+    apiBaseUrl: getApiBaseUrl(),
+    error,
+  });
 }
 
 export function getAuthToken() {
@@ -80,15 +119,21 @@ export function clearAuthToken() {
 export async function apiFetch(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers || {});
   const token = getAuthToken();
+  const url = buildApiUrl(path);
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  return fetch(buildApiUrl(path), {
-    ...init,
-    headers,
-  });
+  try {
+    return await fetch(url, {
+      ...init,
+      headers,
+    });
+  } catch (error) {
+    logApiFetchFailure(error, url);
+    throw new Error(getNetworkErrorMessage(url));
+  }
 }
 
 export async function parseApiJson<T>(response: Response): Promise<T> {

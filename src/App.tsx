@@ -12,6 +12,8 @@ import { AuthenticatedRoute, ProtectedRoute, PublicOnlyRoute } from "@/component
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Signup = lazy(() => import("./pages/Signup"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Leads = lazy(() => import("./pages/Leads"));
@@ -73,6 +75,8 @@ export function AppRoutes() {
       <Route element={<PublicOnlyRoute />}>
         <Route path="/auth" element={<Auth />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
       <Route element={<AuthenticatedRoute />}>
         <Route path="/pricing" element={<Pricing />} />

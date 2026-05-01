@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Zap } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
@@ -97,6 +97,13 @@ export default function Auth() {
               required
               className="h-12"
             />
+            {isLogin ? (
+              <div className="text-right">
+                <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+            ) : null}
           </div>
           <Button type="submit" className="h-12 w-full" disabled={isSubmitting}>
             {isSubmitting ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
