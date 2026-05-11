@@ -6,6 +6,8 @@ export interface User {
   id: string;
   fullName: string;
   email: string;
+  plan?: SubscriptionPlan;
+  subscriptionStatus?: SubscriptionStatus;
 }
 
 export type SubscriptionPlan = "starter" | "growth" | "pro";
