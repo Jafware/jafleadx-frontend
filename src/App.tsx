@@ -22,6 +22,7 @@ const Automation = lazy(() => import("./pages/Automation"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Bookings = lazy(() => import("./pages/Bookings"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
+const Account = lazy(() => import("./pages/Account"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -81,16 +82,18 @@ export function AppRoutes() {
       <Route element={<AuthenticatedRoute />}>
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/profile" element={<Account />} />
       </Route>
       <Route element={<AuthenticatedRoute />}>
         <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/leads" element={<Leads />} />
-        <Route path="/conversations" element={<Conversations />} />
-        <Route path="/automation" element={<Automation />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/bookings" element={<Bookings />} />
-        <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/leads" element={<Leads />} />
+          <Route path="/conversations" element={<Conversations />} />
+          <Route path="/automation" element={<Automation />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/bookings" element={<Bookings />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />

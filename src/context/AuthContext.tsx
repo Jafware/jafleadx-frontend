@@ -10,6 +10,7 @@ interface AuthContextValue {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
+  updateProfile: (fullName: string) => Promise<User>;
   hydrate: () => Promise<void>;
   logout: () => void;
 }
@@ -125,6 +126,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAuthToken(payload.data.accessToken);
         setHasToken(true);
         setUser(payload.data.user);
+      },
+      async updateProfile(fullName: string) {
+        const normalizedName = fullName.trim();
+
+        if (!normalizedName) {
+          throw new Error("Full name is required.");
+        }
+
+        const response = await apiFetch("/api/auth/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fullName: normalizedName,
+          }),
+        });
+        const payload = await parseApiJson<AuthApiResponse>(response);
+
+        if (!response.ok || !payload.data?.user) {
+          throw new Error(payload.message || "Unable to update profile.");
+        }
+
+        setUser(payload.data.user);
+        return payload.data.user;
       },
       logout() {
         clearAuthToken();

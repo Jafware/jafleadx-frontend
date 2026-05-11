@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Menu,
   LogOut,
+  UserRound,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navItems = [
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/bookings", icon: Calendar, label: "Bookings" },
   { to: "/settings", icon: Settings, label: "Settings" },
+  { to: "/account", icon: UserRound, label: "Account" },
   { to: "/pricing", icon: CreditCard, label: "Pricing" },
 ];
 
@@ -97,11 +99,15 @@ export function AppSidebar() {
 
         <div className="space-y-3 border-t border-sidebar-border/80 p-3">
           {!collapsed && user ? (
-            <div className="rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-2.5">
+            <NavLink
+              to="/account"
+              onClick={() => setMobileOpen(false)}
+              className="block rounded-xl border border-sidebar-border/70 bg-sidebar-accent/60 px-3 py-2.5 transition-colors hover:bg-sidebar-accent"
+            >
               <p className="text-sm font-medium text-foreground truncate">{user.fullName}</p>
               <p className="mt-0.5 text-xs text-muted-foreground truncate">{user.email}</p>
               <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary">Plan: {currentPlan.name}</p>
-            </div>
+            </NavLink>
           ) : null}
           <Button
             type="button"
