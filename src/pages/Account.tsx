@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
 import { useBilling } from "@/context/BillingContext";
+import { apiFetch, parseApiJson } from "@/lib/api-client";
 
 function formatStatus(status: string) {
   return status
@@ -23,6 +24,10 @@ export default function Account() {
   const { currentPlan, subscription } = useBilling();
   const [fullName, setFullName] = useState(user?.fullName || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const normalizedFullName = fullName.trim();
   const hasChanges = normalizedFullName !== (user?.fullName || "");
 
@@ -54,6 +59,58 @@ export default function Account() {
   const handleLogout = () => {
     logout();
     navigate("/auth", { replace: true });
+  };
+
+  const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!currentPassword || !newPassword) {
+      toast.error("Current password and new password are required.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast.error("New password confirmation does not match.");
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      toast.error("New password must be different from your current password.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const response = await apiFetch("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+      const payload = await parseApiJson<{ message?: string }>(response);
+
+      if (!response.ok) {
+        throw new Error(payload.message || "Unable to change password.");
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      toast.success(payload.message || "Password changed successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to change password.");
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
@@ -111,10 +168,58 @@ export default function Account() {
             </div>
 
             <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">Email and password changes are not available in this step.</p>
+              <p className="text-sm text-muted-foreground">Email changes are not available in this step.</p>
               <Button type="submit" disabled={isSaving || !hasChanges} className="rounded-lg">
                 <Save className="mr-2 h-4 w-4" />
                 {isSaving ? "Saving..." : "Save profile"}
+              </Button>
+            </div>
+          </form>
+
+          <form onSubmit={handleChangePassword} className="rounded-lg border border-border bg-card p-5 shadow-sm lg:col-start-1">
+            <div className="border-b border-border pb-4">
+              <h2 className="text-lg font-semibold text-foreground">Change password</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Update the password you use to sign in to this account.</p>
+            </div>
+
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="currentPassword">Current password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmNewPassword">Confirm new password</Label>
+                <Input
+                  id="confirmNewPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">Your active session stays signed in after this update.</p>
+              <Button type="submit" disabled={isChangingPassword} className="rounded-lg">
+                <Save className="mr-2 h-4 w-4" />
+                {isChangingPassword ? "Changing..." : "Change password"}
               </Button>
             </div>
           </form>
