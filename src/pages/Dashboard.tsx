@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/AppLayout";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import { StatCard } from "@/components/StatCard";
 import { useAppData } from "@/context/AppDataContext";
 import { useBilling } from "@/context/BillingContext";
@@ -183,6 +184,8 @@ export default function Dashboard() {
             />
           </div>
         </section>
+
+        <OnboardingChecklist />
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.85fr)]">
           <div className="rounded-[30px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_35%_7%))] px-6 py-7 shadow-[0_24px_70px_hsl(222_47%_3%/0.4)] sm:px-7">

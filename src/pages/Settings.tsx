@@ -516,6 +516,7 @@ export default function SettingsPage() {
         </section>
 
         <section
+          id="business-profile"
           className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_28%_9%))] p-6 shadow-[0_18px_50px_hsl(222_40%_4%/0.32)]"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
@@ -624,6 +625,7 @@ export default function SettingsPage() {
         </section>
 
         <section
+          id="website-knowledge"
           className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(210_32%_9%))] p-6 shadow-[0_18px_50px_hsl(210_40%_4%/0.32)]"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
@@ -713,6 +715,7 @@ export default function SettingsPage() {
         </section>
 
         <section
+          id="website-capture"
           className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(210_40%_9%))] p-6 shadow-[0_18px_50px_hsl(210_45%_4%/0.35)]"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
