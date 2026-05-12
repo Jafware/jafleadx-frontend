@@ -12,6 +12,7 @@ export interface User {
 
 export type SubscriptionPlan = "starter" | "growth" | "pro";
 export type SubscriptionStatus = "inactive" | "pending" | "active" | "cancelled" | "expired";
+export type BillingMode = "disabled" | "test" | "live";
 export type FeatureKey =
   | "followUpAutomation"
   | "bookings"
@@ -29,6 +30,7 @@ export interface BillingSubscription {
   shortUrl?: string;
   currentStart?: string;
   currentEnd?: string;
+  billingMode: BillingMode;
   updatedAt: string;
 }
 
