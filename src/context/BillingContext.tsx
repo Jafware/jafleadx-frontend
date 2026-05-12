@@ -90,6 +90,7 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<BillingContextValue>(() => {
     const currentPlan = getPlanDefinition(subscription.plan);
+    const entitlementPlan = subscription.status === "active" ? currentPlan : getPlanDefinition("starter");
 
     return {
       subscription,
@@ -98,10 +99,10 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
       plans: PLAN_DEFINITIONS,
       currentPlan,
       hasFeature(feature) {
-        return hasFeatureAccess(subscription.plan, feature);
+        return subscription.status === "active" && hasFeatureAccess(subscription.plan, feature);
       },
       canAddLead(leadCount) {
-        return currentPlan.leadLimit === null || leadCount < currentPlan.leadLimit;
+        return entitlementPlan.leadLimit === null || leadCount < entitlementPlan.leadLimit;
       },
       async refreshSubscription() {
         if (!user?.email) {

@@ -13,7 +13,7 @@ function RouteLoading() {
 }
 
 function hasCoreAppAccess(subscription: { plan: string; status: string }) {
-  return subscription.plan === "starter" || subscription.status === "active";
+  return subscription.plan === "starter" || subscription.status === "active" || subscription.status === "pending";
 }
 
 export function AuthenticatedRoute() {

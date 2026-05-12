@@ -30,10 +30,10 @@ export default function Pricing() {
             void (async () => {
               try {
                 await refreshSubscription();
-                toast.success("Payment successful. Redirecting to your dashboard.");
+                toast.success("Payment received. Your plan will activate after Razorpay confirms it.");
                 navigate("/dashboard", { replace: true });
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Payment succeeded, but we could not refresh your subscription yet.");
+                toast.error(error instanceof Error ? error.message : "Payment was submitted, but we could not refresh your subscription yet.");
                 navigate("/dashboard", { replace: true });
               }
             })();
@@ -108,7 +108,13 @@ export default function Pricing() {
                 disabled={isLoading || currentPlan.id === plan.id}
                 onClick={() => void handleSubscribe(plan.id)}
               >
-                {currentPlan.id === plan.id ? "Current Plan" : isLoading ? "Opening Checkout..." : "Subscribe Monthly"}
+                {currentPlan.id === plan.id
+                  ? subscription.status === "pending"
+                    ? "Payment Pending"
+                    : "Current Plan"
+                  : isLoading
+                    ? "Opening Checkout..."
+                    : "Subscribe Monthly"}
               </Button>
             </div>
           ))}
