@@ -2,13 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { apiFetch, parseApiJson } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { DEFAULT_SUBSCRIPTION, getPlanDefinition, hasFeatureAccess, PLAN_DEFINITIONS } from "@/lib/plans";
-import type { BillingSubscription, FeatureKey, SubscriptionPlan } from "@/types/app";
+import type { BillingMode, BillingSubscription, FeatureKey, SubscriptionPlan } from "@/types/app";
 
 interface BillingContextValue {
   subscription: BillingSubscription;
   isLoading: boolean;
   hasLoadedSubscription: boolean;
   plans: typeof PLAN_DEFINITIONS;
+  billingMode: BillingMode;
   currentPlan: ReturnType<typeof getPlanDefinition>;
   hasFeature: (feature: FeatureKey) => boolean;
   canAddLead: (leadCount: number) => boolean;
@@ -35,6 +36,7 @@ async function fetchSubscriptionStatus(email: string) {
       currentPeriodStart?: string | null;
       currentPeriodEnd?: string | null;
       subscriptionId?: string | null;
+      billingMode?: BillingMode;
     };
   }>(response);
 
@@ -49,6 +51,7 @@ async function fetchSubscriptionStatus(email: string) {
     razorpaySubscriptionId: payload.data.subscriptionId || undefined,
     currentStart: payload.data.currentPeriodStart || undefined,
     currentEnd: payload.data.currentPeriodEnd || undefined,
+    billingMode: payload.data.billingMode || "disabled",
     updatedAt: new Date().toISOString(),
   };
 }
@@ -97,6 +100,7 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       hasLoadedSubscription,
       plans: PLAN_DEFINITIONS,
+      billingMode: subscription.billingMode,
       currentPlan,
       hasFeature(feature) {
         return subscription.status === "active" && hasFeatureAccess(subscription.plan, feature);
@@ -118,6 +122,10 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
         }
       },
       async startSubscriptionCheckout(plan) {
+        if (subscription.billingMode === "disabled") {
+          throw new Error("Paid subscriptions are not available yet. Please contact support to activate a plan.");
+        }
+
         if (!user?.email || !user.fullName) {
           throw new Error("Please sign in before starting a subscription.");
         }
@@ -139,6 +147,7 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
               keyId?: string;
               shortUrl?: string;
               subscriptionId?: string;
+              billingMode?: BillingMode;
               customer?: {
                 email: string;
                 name: string;
@@ -167,6 +176,7 @@ export function BillingProvider({ children }: { children: React.ReactNode }) {
             shortUrl: payload.data.shortUrl,
             currentStart: payload.data.user.current_period_start || undefined,
             currentEnd: payload.data.user.current_period_end || undefined,
+            billingMode: payload.data.billingMode || subscription.billingMode,
             updatedAt: new Date().toISOString(),
           });
           return {

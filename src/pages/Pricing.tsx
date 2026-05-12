@@ -8,10 +8,24 @@ import { useNavigate } from "react-router-dom";
 import { loadRazorpayCheckout } from "@/lib/razorpay";
 
 export default function Pricing() {
-  const { currentPlan, plans, refreshSubscription, startSubscriptionCheckout, subscription, isLoading } = useBilling();
+  const { billingMode, currentPlan, plans, refreshSubscription, startSubscriptionCheckout, subscription, isLoading } = useBilling();
   const navigate = useNavigate();
+  const isBillingDisabled = billingMode === "disabled";
+
+  const handleActivationRequest = (planName: string) => {
+    const subject = encodeURIComponent(`Activate ${planName} plan for JafLeadX AI`);
+    const body = encodeURIComponent("Hi Jafware team, I would like to activate this plan for my JafLeadX AI account.");
+    window.location.href = `mailto:support@jafware.com?subject=${subject}&body=${body}`;
+  };
 
   const handleSubscribe = async (planId: (typeof plans)[number]["id"]) => {
+    const selectedPlan = plans.find((plan) => plan.id === planId);
+
+    if (isBillingDisabled) {
+      handleActivationRequest(selectedPlan?.name || "paid");
+      return;
+    }
+
     try {
       const { customer, keyId, shortUrl, subscriptionId } = await startSubscriptionCheckout(planId);
 
@@ -66,6 +80,11 @@ export default function Pricing() {
         <div className="text-center max-w-xl mx-auto">
           <h1 className="text-3xl font-display font-bold text-foreground">Choose Your Plan</h1>
           <p className="text-muted-foreground mt-2">Scale your lead conversion with the right plan for your business</p>
+          {isBillingDisabled ? (
+            <p className="mt-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              Online payments are currently in private activation. Contact Jafware to enable Growth or Pro.
+            </p>
+          ) : null}
           <p className="mt-3 text-sm text-muted-foreground">
             Current subscription: <span className="font-medium text-foreground">{currentPlan.name}</span> • {subscription.status}
           </p>
@@ -112,6 +131,8 @@ export default function Pricing() {
                   ? subscription.status === "pending"
                     ? "Payment Pending"
                     : "Current Plan"
+                  : isBillingDisabled
+                    ? "Request activation"
                   : isLoading
                     ? "Opening Checkout..."
                     : "Subscribe Monthly"}

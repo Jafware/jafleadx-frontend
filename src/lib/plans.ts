@@ -54,6 +54,7 @@ export const DEFAULT_SUBSCRIPTION: BillingSubscription = {
   plan: "starter",
   status: "inactive",
   billingInterval: "monthly",
+  billingMode: "disabled",
   updatedAt: new Date().toISOString(),
 };
 
