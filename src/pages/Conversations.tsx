@@ -81,6 +81,21 @@ function formatConversationTimestamp(conversation: Conversation) {
   return new Intl.DateTimeFormat([], isToday ? { hour: "numeric", minute: "2-digit" } : { month: "short", day: "numeric" }).format(date);
 }
 
+function formatFollowUpTimestamp(value?: string | null) {
+  const date = parseTimestamp(value);
+
+  if (!date) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function getChannelLabel(channel: string) {
   if (channel.toLowerCase().includes("whatsapp")) {
     return "WhatsApp";
@@ -511,6 +526,10 @@ export default function Conversations() {
   };
 
   const activeMode = activeConversation?.mode ?? "ai";
+  const activeFollowUpState = activeConversation?.followUpState;
+  const nextFollowUpLabel = formatFollowUpTimestamp(activeFollowUpState?.nextFollowUpAt);
+  const followUpCount = activeFollowUpState?.followUpCount ?? activeFollowUpState?.sentStepIds.length ?? 0;
+  const autopilotPaused = Boolean(activeMode === "manual" || activeFollowUpState?.autopilotPaused || activeFollowUpState?.autopilotEnabled === false);
   const canUseAiDrafts = hasFeature("aiDrafts");
 
   return (
@@ -690,6 +709,16 @@ export default function Conversations() {
                           <Clock3 className="h-3 w-3" />
                           Last message {formatConversationTimestamp(activeConversation)}
                         </span>
+                        <span>•</span>
+                        <span>
+                          {autopilotPaused
+                            ? "Follow-ups paused"
+                            : nextFollowUpLabel
+                              ? `Next follow-up ${nextFollowUpLabel}`
+                              : "No follow-up scheduled"}
+                        </span>
+                        <span>•</span>
+                        <span>{followUpCount}/3 follow-ups</span>
                       </div>
                     </div>
                     <div className="hidden items-center gap-2 sm:flex">
@@ -826,6 +855,13 @@ export default function Conversations() {
                           </Button>
                           <span className={cn("rounded-full px-3 py-1 text-[11px] font-medium", activeMode === "manual" ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300")}>
                             {activeMode === "manual" ? "Manual override active" : "AI autopilot active"}
+                          </span>
+                          <span className="rounded-full bg-[#202c33] px-3 py-1 text-[11px] font-medium text-slate-300">
+                            {autopilotPaused
+                              ? "Follow-ups paused"
+                              : nextFollowUpLabel
+                                ? `Next ${nextFollowUpLabel}`
+                                : `${followUpCount}/3 follow-ups`}
                           </span>
                           {!canUseAiDrafts ? <span className="text-xs text-amber-300">Upgrade to Growth to unlock AI draft assist.</span> : null}
                         </div>

@@ -67,6 +67,7 @@ function appendMessage(
   lastMsg = message.text,
 ) {
   const isLeadMessage = message.from === "lead";
+  const currentFollowUpState = conversation.followUpState ?? { awaitingReplySince: null, sentStepIds: [] };
 
   return {
     ...conversation,
@@ -76,15 +77,28 @@ function appendMessage(
     lastMsg,
     messages: [...conversation.messages, message],
     followUpState: isLeadMessage
-      ? { awaitingReplySince: null, sentStepIds: [] }
+      ? {
+          ...currentFollowUpState,
+          awaitingReplySince: null,
+          sentStepIds: [],
+          nextFollowUpAt: null,
+          lastLeadReplyAt: message.createdAt ?? date.toISOString(),
+        }
       : {
+          ...currentFollowUpState,
           awaitingReplySince:
             message.kind === "follow-up"
-              ? conversation.followUpState?.awaitingReplySince ?? message.createdAt ?? date.toISOString()
+              ? currentFollowUpState.awaitingReplySince ?? message.createdAt ?? date.toISOString()
               : message.createdAt ?? date.toISOString(),
-          sentStepIds: message.kind === "follow-up" ? conversation.followUpState?.sentStepIds ?? [] : [],
+          sentStepIds: message.kind === "follow-up" ? currentFollowUpState.sentStepIds : [],
+          nextFollowUpAt: null,
+          lastAiReplyAt: senderIsAiMessage(message) ? message.createdAt ?? date.toISOString() : currentFollowUpState.lastAiReplyAt,
         },
   };
+}
+
+function senderIsAiMessage(message: ConversationMessage) {
+  return message.from === "ai" || Boolean(message.isAi);
 }
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
@@ -132,7 +146,17 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
             unread: false,
             time: formatRelativeLabel(now),
             lastMsg: "Lead added to pipeline",
-            followUpState: { awaitingReplySince: null, sentStepIds: [] },
+            followUpState: {
+              awaitingReplySince: null,
+              sentStepIds: [],
+              autopilotEnabled: true,
+              autopilotPaused: false,
+              nextFollowUpAt: null,
+              followUpCount: 0,
+              lastFollowUpAt: null,
+              lastLeadReplyAt: null,
+              lastAiReplyAt: now.toISOString(),
+            },
             messages: [
               {
                 id: 1,
