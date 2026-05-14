@@ -62,6 +62,13 @@ export interface ConversationMessage {
 export interface ConversationFollowUpState {
   awaitingReplySince: string | null;
   sentStepIds: number[];
+  autopilotEnabled?: boolean;
+  autopilotPaused?: boolean;
+  nextFollowUpAt?: string | null;
+  followUpCount?: number;
+  lastFollowUpAt?: string | null;
+  lastLeadReplyAt?: string | null;
+  lastAiReplyAt?: string | null;
 }
 
 export interface Conversation {
