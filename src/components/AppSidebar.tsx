@@ -13,6 +13,7 @@ import {
   Menu,
   LogOut,
   UserRound,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,9 @@ export function AppSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
   const { currentPlan } = useBilling();
+  const visibleNavItems = user?.isAdmin
+    ? [...navItems, { to: "/admin", icon: ShieldCheck, label: "Admin" }]
+    : navItems;
 
   return (
     <>
@@ -77,7 +81,7 @@ export function AppSidebar() {
 
         {/* Nav */}
         <nav className="flex-1 space-y-1.5 px-3 py-5">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

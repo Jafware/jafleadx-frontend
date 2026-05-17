@@ -23,6 +23,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const Bookings = lazy(() => import("./pages/Bookings"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const Account = lazy(() => import("./pages/Account"));
+const Admin = lazy(() => import("./pages/Admin"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -94,6 +95,7 @@ export function AppRoutes() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/bookings" element={<Bookings />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin" element={<Admin />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
