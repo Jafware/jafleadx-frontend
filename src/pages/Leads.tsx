@@ -786,8 +786,8 @@ export default function Leads() {
           className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_35%_7%))] p-4 shadow-[0_18px_50px_hsl(222_47%_3%/0.35)] sm:p-5"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="relative w-full xl:max-w-sm">
+          <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
+            <div className="relative min-w-0 md:col-span-2 xl:col-span-2 2xl:col-span-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search name, email, phone, source, origin, or notes"
@@ -797,92 +797,90 @@ export default function Leads() {
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:flex xl:items-center">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-border/70 bg-secondary/35 px-3 py-2 text-xs font-medium text-muted-foreground">
-                <Filter className="h-3.5 w-3.5" />
-                Filters
-              </div>
-              <Button type="button" variant="outline" className="h-11 rounded-2xl" onClick={() => setSoundEnabled((current) => !current)}>
-                {soundEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-                {soundEnabled ? "Sound on" : "Sound off"}
-              </Button>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-11 min-w-[170px] rounded-2xl">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item === "all" ? "All statuses" : item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="h-11 min-w-[170px] rounded-2xl">
-                  <SelectValue placeholder="Filter by source" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sourceOptions.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item === "all" ? "All sources" : item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={modeFilter} onValueChange={setModeFilter}>
-                <SelectTrigger className="h-11 min-w-[150px] rounded-2xl">
-                  <SelectValue placeholder="AI/manual" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modeOptions.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item === "all" ? "All modes" : item === "ai" ? "AI handled" : "Manual handled"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-                <SelectTrigger className="h-11 min-w-[170px] rounded-2xl">
-                  <SelectValue placeholder="Segment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {segmentOptions.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item === "all"
-                        ? "All leads"
-                        : item === "recent"
-                          ? "New in 7 days"
-                          : item === "demo_ready"
-                            ? "Demo/contact ready"
-                            : "Converted"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-11 min-w-[170px] rounded-2xl">
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortOptions.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item === "recently_active"
-                        ? "Recently active"
-                        : item === "newest"
-                          ? "Newest first"
-                          : item === "oldest"
-                            ? "Oldest first"
-                            : "Most messages"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" className="h-11 rounded-2xl" onClick={exportVisibleLeads} disabled={filteredLeads.length === 0}>
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
+            <div className="inline-flex min-w-0 items-center gap-2 rounded-2xl border border-border/70 bg-secondary/35 px-3 py-2 text-xs font-medium text-muted-foreground">
+              <Filter className="h-3.5 w-3.5 shrink-0" />
+              Filters
             </div>
+            <Button type="button" variant="outline" className="h-11 w-full min-w-0 rounded-2xl" onClick={() => setSoundEnabled((current) => !current)}>
+              {soundEnabled ? <Bell className="h-4 w-4 shrink-0" /> : <BellOff className="h-4 w-4 shrink-0" />}
+              <span className="truncate">{soundEnabled ? "Sound on" : "Sound off"}</span>
+            </Button>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item === "all" ? "All statuses" : item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl">
+                <SelectValue placeholder="Filter by source" />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceOptions.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item === "all" ? "All sources" : item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={modeFilter} onValueChange={setModeFilter}>
+              <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl">
+                <SelectValue placeholder="AI/manual" />
+              </SelectTrigger>
+              <SelectContent>
+                {modeOptions.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item === "all" ? "All modes" : item === "ai" ? "AI handled" : "Manual handled"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+              <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl">
+                <SelectValue placeholder="Segment" />
+              </SelectTrigger>
+              <SelectContent>
+                {segmentOptions.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item === "all"
+                      ? "All leads"
+                      : item === "recent"
+                        ? "New in 7 days"
+                        : item === "demo_ready"
+                          ? "Demo/contact ready"
+                          : "Converted"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-11 w-full min-w-0 rounded-2xl">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item === "recently_active"
+                      ? "Recently active"
+                      : item === "newest"
+                        ? "Newest first"
+                        : item === "oldest"
+                          ? "Oldest first"
+                          : "Most messages"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" className="h-11 w-full min-w-0 rounded-2xl" onClick={exportVisibleLeads} disabled={filteredLeads.length === 0}>
+              <Download className="h-4 w-4 shrink-0" />
+              <span className="truncate">Export CSV</span>
+            </Button>
           </div>
         </section>
 
