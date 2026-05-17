@@ -25,8 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BrainCircuit, Copy, Globe, Plus, RefreshCw, Shield, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { BookOpen, Bot, BrainCircuit, Copy, Globe, KeyRound, MessageCircle, Plus, RefreshCw, Shield, Trash2 } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import type { FaqItem, Settings } from "@/types/app";
 
@@ -117,13 +118,20 @@ function buildEmbedInstructions(siteKey: string, allowedOrigins: string[]) {
   return [
     "Website lead capture setup",
     "",
-    "1. Include your siteKey in public lead capture requests from your website.",
-    `   siteKey: "${resolvedSiteKey}"`,
+    "1. Add this public site key to your website form.",
+    `   ${resolvedSiteKey}`,
     "",
-    "2. Send requests only from an allowed origin listed in this settings section.",
+    "2. Allow the exact website origin that will submit the form.",
     `   Example allowed origin: ${exampleOrigin}`,
     "",
-    "3. If you regenerate the key here, update your website integration immediately.",
+    "3. Submit leads to your backend capture endpoint.",
+    "   POST /api/leads/capture",
+    "",
+    "4. Include JSON fields like this:",
+    `   { "siteKey": "${resolvedSiteKey}", "name": "Lead Name", "phone": "+14155550123", "email": "lead@example.com", "message": "I'm interested" }`,
+    "",
+    "The site key is public. Security comes from matching it with your allowed website origins.",
+    "If you regenerate the key here, update your website integration immediately.",
   ].join("\n");
 }
 
@@ -141,8 +149,31 @@ function formatWebsiteKnowledgeTimestamp(value: string | null) {
   return date.toLocaleString();
 }
 
+function SetupHelperCard({
+  title,
+  children,
+  icon,
+}: {
+  title: string;
+  children: ReactNode;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="rounded-[22px] border border-border/70 bg-secondary/20 p-4">
+      <div className="flex items-start gap-3">
+        {icon ? <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">{icon}</div> : null}
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium text-foreground">{title}</p>
+          <div className="text-sm leading-6 text-muted-foreground">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { data, saveSettings } = useAppData();
+  const [businessName, setBusinessName] = useState(data.settings.businessName);
   const [businessType, setBusinessType] = useState(data.settings.businessType);
   const [whatsappNumber, setWhatsappNumber] = useState(data.settings.whatsappNumber);
   const [websiteUrl, setWebsiteUrl] = useState(data.settings.websiteUrl);
@@ -172,6 +203,7 @@ export default function SettingsPage() {
   const [publicCaptureError, setPublicCaptureError] = useState<string | null>(null);
 
   const applySettingsToState = useCallback((settings: Partial<Settings>) => {
+    setBusinessName(settings.businessName ?? data.settings.businessName);
     setBusinessType(settings.businessType || data.settings.businessType);
     setWhatsappNumber(settings.whatsappNumber || data.settings.whatsappNumber);
     setWebsiteUrl(settings.websiteUrl || data.settings.websiteUrl);
@@ -205,6 +237,7 @@ export default function SettingsPage() {
           : [{ id: 1, question: "", answer: "" }],
     );
   }, [
+    data.settings.businessName,
     data.settings.businessType,
     data.settings.faqs,
     data.settings.publicCaptureAllowedOrigins,
@@ -259,6 +292,7 @@ export default function SettingsPage() {
     data.settings.websiteKnowledgeText,
     data.settings.websiteKnowledgeUpdatedAt,
     data.settings.websiteUrl,
+    data.settings.businessName,
     data.settings.tone,
     data.settings.whatsappNumber,
   ]);
@@ -302,6 +336,7 @@ export default function SettingsPage() {
 
     const nextSettings: SettingsUpdatePayload = {
       ...data.settings,
+      businessName: businessName.trim(),
       businessType,
       whatsappNumber,
       websiteUrl: websiteUrl.trim(),
@@ -452,6 +487,7 @@ export default function SettingsPage() {
         </div>
 
         <section
+          id="business-profile"
           className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_35%_7%))] p-6 shadow-[0_18px_50px_hsl(222_47%_3%/0.35)]"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
@@ -460,14 +496,30 @@ export default function SettingsPage() {
               <BrainCircuit className="h-5 w-5" />
             </div>
             <div className="space-y-2">
-              <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-foreground">AI profile</h2>
+              <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-foreground">Business Profile</h2>
               <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-                These settings shape qualification logic, tone of voice, and the answers your AI can give in chat.
+                Start with the basics. These details help organize your account and keep setup steps clear.
               </p>
             </div>
           </div>
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <SetupHelperCard title="What to enter" icon={<BookOpen className="h-4 w-4" />}>
+              Use the business name your customers recognize, then choose the closest business type. AI-specific service and sales details live in the next section.
+            </SetupHelperCard>
+            <div className="hidden md:block" />
+
+            <div className="space-y-2">
+              <Label htmlFor="business-name">Business name</Label>
+              <Input
+                id="business-name"
+                value={businessName}
+                onChange={(event) => setBusinessName(event.target.value)}
+                placeholder="Jafware"
+                disabled={isLoading || isSaving}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label>Business Type</Label>
               <Select value={businessType} onValueChange={setBusinessType} disabled={isLoading}>
@@ -482,19 +534,6 @@ export default function SettingsPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>WhatsApp Number</Label>
-              <Input
-                value={whatsappNumber}
-                onChange={(event) => setWhatsappNumber(event.target.value)}
-                placeholder="+91 98765 43210"
-                disabled={isLoading}
-              />
-              <p className="text-xs leading-6 text-muted-foreground">
-                Use the same Twilio WhatsApp sender number that receives inbound messages. Example: `+919999999999`
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -516,7 +555,45 @@ export default function SettingsPage() {
         </section>
 
         <section
-          id="business-profile"
+          id="whatsapp"
+          className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_30%_8%))] p-6 shadow-[0_18px_50px_hsl(222_45%_4%/0.32)]"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-foreground">WhatsApp Connection</h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                Tell JafLeadX which WhatsApp sender is connected through Twilio for inbound and outbound lead conversations.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <SetupHelperCard title="Current MVP routing" icon={<MessageCircle className="h-4 w-4" />}>
+              The saved number should match the configured Twilio WhatsApp sender. Client-owned WhatsApp onboarding is not automated yet.
+            </SetupHelperCard>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp-number">Twilio WhatsApp sender</Label>
+              <Input
+                id="whatsapp-number"
+                value={whatsappNumber}
+                onChange={(event) => setWhatsappNumber(event.target.value)}
+                placeholder="+14155238886"
+                disabled={isLoading || isSaving}
+              />
+              <p className="text-xs leading-6 text-muted-foreground">
+                Use E.164 format, for example <span className="font-mono">+14155238886</span>.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="ai-business-profile"
           className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_28%_9%))] p-6 shadow-[0_18px_50px_hsl(222_40%_4%/0.32)]"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
@@ -533,6 +610,13 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <SetupHelperCard title="How the AI uses this" icon={<Bot className="h-4 w-4" />}>
+              Write this like a sales briefing for your assistant. Services should be customer-facing, pricing should be clear, and the primary CTA should be direct.
+            </SetupHelperCard>
+            <SetupHelperCard title="Internal guidance only" icon={<Shield className="h-4 w-4" />}>
+              Custom instructions guide behavior behind the scenes. They are not shown to leads as scripted customer-facing copy.
+            </SetupHelperCard>
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="business-description">What does your business do?</Label>
               <Textarea
@@ -557,6 +641,9 @@ export default function SettingsPage() {
                 disabled={isLoading || isSaving}
                 className="rounded-2xl"
               />
+              <p className="text-xs leading-6 text-muted-foreground">
+                Use customer-facing service names, not internal package codes.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -570,6 +657,9 @@ export default function SettingsPage() {
                 disabled={isLoading || isSaving}
                 className="rounded-2xl"
               />
+              <p className="text-xs leading-6 text-muted-foreground">
+                Give enough guidance for pricing questions, including when the AI should suggest a consultation instead.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -594,6 +684,9 @@ export default function SettingsPage() {
                 placeholder="Book a demo, request a quote, schedule a consultation"
                 disabled={isLoading || isSaving}
               />
+              <p className="text-xs leading-6 text-muted-foreground">
+                Keep this direct, for example <span className="font-medium text-foreground">Offer a demo</span>.
+              </p>
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -607,6 +700,9 @@ export default function SettingsPage() {
                 rows={3}
                 className="rounded-2xl"
               />
+              <p className="text-xs leading-6 text-muted-foreground">
+                Internal guidance only. Avoid writing exact customer-facing scripts here.
+              </p>
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -642,6 +738,10 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-6 space-y-5">
+            <SetupHelperCard title="What this does" icon={<Globe className="h-4 w-4" />}>
+              Refreshing website knowledge imports a text snapshot from your site. The AI uses this content as context when answering lead questions.
+            </SetupHelperCard>
+
             <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
               <div className="space-y-2">
                 <Label htmlFor="website-url">Website URL</Label>
@@ -662,10 +762,10 @@ export default function SettingsPage() {
                 variant="outline"
                 disabled={isLoading || isSaving || isRefreshingWebsiteKnowledge || !websiteUrl.trim()}
                 onClick={() => void handleRefreshWebsiteKnowledge()}
-                className="h-11 rounded-2xl px-4"
+                className="h-11 w-full rounded-2xl px-4 md:w-auto"
               >
                 {isRefreshingWebsiteKnowledge ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                Refresh Website Knowledge
+                {isRefreshingWebsiteKnowledge ? "Refreshing..." : "Refresh Knowledge"}
               </Button>
             </div>
 
@@ -708,7 +808,7 @@ export default function SettingsPage() {
                 value={websiteKnowledgeText || "No website knowledge has been imported yet."}
                 readOnly
                 rows={10}
-                className="rounded-2xl border-border/70 bg-secondary/20 text-xs leading-6"
+                className="rounded-2xl border-border/70 bg-secondary/20 text-xs leading-6 [overflow-wrap:anywhere]"
               />
             </div>
           </div>
@@ -734,6 +834,15 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-6 space-y-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <SetupHelperCard title="Allowed origins protect capture" icon={<Shield className="h-4 w-4" />}>
+                Add the exact domain that hosts your lead form, such as <span className="font-mono text-foreground">https://yourdomain.com</span>. Do not include paths.
+              </SetupHelperCard>
+              <SetupHelperCard title="Site key is public" icon={<KeyRound className="h-4 w-4" />}>
+                This key is safe to place in website code, but it only works when requests come from an allowed origin.
+              </SetupHelperCard>
+            </div>
+
             <div className="flex flex-col gap-4 rounded-[24px] border border-border/70 bg-secondary/20 p-5 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <Label htmlFor="public-capture-enabled" className="text-sm font-medium text-foreground">
@@ -741,6 +850,12 @@ export default function SettingsPage() {
                 </Label>
                 <p className="text-sm text-muted-foreground">
                   Allow website forms to send public lead capture requests with your site key.
+                </p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Current state:{" "}
+                  <span className={publicCaptureEnabled ? "text-success" : "text-amber-300"}>
+                    {publicCaptureEnabled ? "Enabled" : "Disabled"}
+                  </span>
                 </p>
               </div>
               <Switch
@@ -777,7 +892,7 @@ export default function SettingsPage() {
                   readOnly
                   disabled={isLoading}
                   placeholder="No site key generated yet"
-                  className="font-mono text-sm"
+                  className="truncate font-mono text-sm"
                 />
               </div>
               <div className="flex flex-wrap gap-3">
@@ -860,7 +975,7 @@ export default function SettingsPage() {
                 className="rounded-2xl font-mono text-sm"
               />
               <p className="text-sm leading-6 text-muted-foreground">
-                Enter one full origin per line. Use the origin only, such as <span className="font-mono">https://example.com</span>.
+                Enter one full origin per line. Use the origin only, such as <span className="font-mono">https://yourdomain.com</span>.
               </p>
             </div>
 
@@ -886,14 +1001,15 @@ export default function SettingsPage() {
               <Textarea
                 value={embedInstructions}
                 readOnly
-                rows={8}
-                className="rounded-2xl border-border/70 bg-secondary/20 font-mono text-xs leading-6"
+                rows={10}
+                className="rounded-2xl border-border/70 bg-secondary/20 font-mono text-xs leading-6 [overflow-wrap:anywhere]"
               />
             </div>
           </div>
         </section>
 
         <section
+          id="faqs"
           className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_35%_7%))] p-6 shadow-[0_18px_50px_hsl(222_47%_3%/0.35)]"
           style={{ boxShadow: "var(--shadow-card)" }}
         >
@@ -904,13 +1020,17 @@ export default function SettingsPage() {
                 Add frequently asked questions so the AI can answer common lead questions with better context.
               </p>
             </div>
-            <Button type="button" variant="outline" onClick={addFaq} className="h-11 rounded-2xl px-4">
+            <Button type="button" variant="outline" onClick={addFaq} className="h-11 w-full rounded-2xl px-4 sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add FAQ
             </Button>
           </div>
 
           <div className="mt-6 space-y-4">
+            <SetupHelperCard title="Good FAQ answers are reusable" icon={<BookOpen className="h-4 w-4" />}>
+              Add answers for common pricing, setup, eligibility, support, or objection questions. Keep them concise and factual.
+            </SetupHelperCard>
+
             {faqs.map((faq, index) => (
               <div key={faq.id} className="rounded-[24px] border border-border/70 bg-secondary/20 p-5">
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -945,8 +1065,31 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        <section
+          id="automation"
+          className="rounded-[28px] border border-border/80 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(222_32%_8%))] p-6 shadow-[0_18px_50px_hsl(222_45%_4%/0.28)]"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <Bot className="h-5 w-5" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="font-display text-xl font-semibold tracking-[-0.02em] text-foreground">Follow-up / Automation</h2>
+                <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                  Follow-up timing and automation controls are managed separately so account setup stays clean.
+                </p>
+              </div>
+            </div>
+            <Button asChild variant="outline" className="h-11 w-full rounded-2xl px-4 sm:w-auto">
+              <Link to="/automation">Open Automation</Link>
+            </Button>
+          </div>
+        </section>
+
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={isSaving || isLoading} className="h-11 rounded-2xl px-5">
+          <Button onClick={handleSave} disabled={isSaving || isLoading} className="h-11 w-full rounded-2xl px-5 sm:w-auto">
             {isLoading ? "Loading..." : isSaving ? "Saving..." : "Save Settings"}
           </Button>
         </div>
